@@ -63,6 +63,7 @@
   button.primary:hover{filter:brightness(1.08); background:var(--accent)}
   button.danger{color:var(--critical-ink); border-color:color-mix(in srgb,var(--critical) 35%,transparent)}
   button.sm{padding:3px 9px; font-size:12px}
+  button.sm.icon{padding:3px 7px; font-size:13px; line-height:1; margin-right:2px}
   button:disabled{opacity:.45; cursor:not-allowed}
 
   /* แถบบอกว่าควรทำอะไรต่อ — ให้คำตอบทันทีที่เปิดหน้า ไม่ต้องไล่อ่านเอง */
@@ -460,6 +461,11 @@
         <button class="sm danger" id="stPickDelete" type="button" disabled>ลบที่เลือก</button>
       </div>
       <div class="scroll"><table id="tStreamers"></table></div>
+      <div class="row" id="streamerPager" style="margin-top:12px; justify-content:center; display:none">
+        <button class="sm" id="stPagePrev" type="button">← ก่อนหน้า</button>
+        <span class="hint" id="stPageInfo"></span>
+        <button class="sm" id="stPageNext" type="button">ถัดไป →</button>
+      </div>
     </div>
   </div>
 
@@ -1315,10 +1321,17 @@ function sortStreamers(list){
 function setStreamerSort(key){
   if (streamerSort.key === key) streamerSort.dir = streamerSort.dir === "asc" ? "desc" : "asc";
   else { streamerSort.key = key; streamerSort.dir = key === "updated_at" ? "desc" : "asc"; }
+  streamerPage = 1;   // เรียงใหม่แล้วกลับไปหน้าแรกเสมอ ไม่งั้นอาจค้างอยู่หน้าที่ไม่มีอะไรแล้ว
   render();
 }
 $("sortByName").addEventListener("click", () => setStreamerSort("streamer_name"));
 $("sortByDate").addEventListener("click", () => setStreamerSort("updated_at"));
+
+/* แบ่งหน้ารายชื่อสตรีมเมอร์ หน้าละ 50 คน กันตารางยาวจนต้อง scroll ไม่รู้จบ */
+const STREAMERS_PER_PAGE = 50;
+let streamerPage = 1;
+$("stPagePrev").addEventListener("click", () => { streamerPage--; render(); });
+$("stPageNext").addEventListener("click", () => { streamerPage++; render(); });
 $("addStreamer").addEventListener("click", () => openForm(null));
 $("cancelStreamer").addEventListener("click", () => { $("streamerForm").style.display="none"; editingId=null; });
 
@@ -1462,9 +1475,13 @@ $("fileStreamers").addEventListener("change", e => {
     objs.forEach(o => {
       const rec={}; STREAMER_COLS.forEach(k=>rec[k]=o[k]||"");
       if (!rec.streamer_id) return;
+      // เขียนทับ updated_at ด้วยวันนี้เสมอ — ไม่งั้นใช้ค่าที่ติดมาจากไฟล์ CSV เอง (มักเป็นวันที่ทำไฟล์ ไม่ใช่วันที่นำเข้าจริง)
+      // ทำให้เรียง "เพิ่ม/แก้ล่าสุด" ผิดที่ คนเพิ่งนำเข้าไม่ขึ้นเป็นรายการล่าสุด
+      rec.updated_at = todayISO();
       const i = DB.streamers.findIndex(s=>s.streamer_id===rec.streamer_id);
       if (i>=0){ DB.streamers[i]=rec; u++; } else { DB.streamers.push(rec); a++; }
     });
+    streamerPage = 1;
     save(); render();
     if (!cfgReady()){
       toast(`นำเข้าแล้ว — เพิ่ม ${a} คน, อัปเดต ${u} คน\nยังไม่ได้ตั้งค่า Apps Script — บันทึกไว้ในเครื่องนี้ก่อน`,"ok");
@@ -2577,9 +2594,12 @@ function handleFiles(files){
       objs.forEach(o => {
         if (!o.streamer_id) return;
         const rec={}; STREAMER_COLS.forEach(k=>rec[k]=o[k]||"");
+        // เหมือนกับ "นำเข้า CSV" ที่แท็บสตรีมเมอร์ — วันนี้คือวันที่นำเข้าจริง ไม่ใช่วันที่ในไฟล์
+        rec.updated_at = todayISO();
         const i = DB.streamers.findIndex(s=>s.streamer_id===rec.streamer_id);
         if (i>=0) DB.streamers[i]=rec; else DB.streamers.push(rec);
       });
+      streamerPage = 1;
     }
     return { file:f.name, sheet:name };
   }))).then(async res => {
@@ -3197,8 +3217,18 @@ function render(){
   const arrow = dir => dir === "asc" ? "▲" : "▼";
   $("sortByNameArrow").textContent = streamerSort.key === "streamer_name" ? arrow(streamerSort.dir) : "";
   $("sortByDateArrow").textContent = streamerSort.key === "updated_at" ? arrow(streamerSort.dir) : "";
+
+  // แบ่งหน้า หน้าละ 50 คน — กันตารางยาวจนต้อง scroll ไม่รู้จบ
+  const stTotalPages = Math.max(1, Math.ceil(sortedStreamers.length / STREAMERS_PER_PAGE));
+  streamerPage = Math.min(Math.max(1, streamerPage), stTotalPages);
+  const stStart = (streamerPage - 1) * STREAMERS_PER_PAGE;
+  const pageStreamers = sortedStreamers.slice(stStart, stStart + STREAMERS_PER_PAGE);
+
   tbl(ts, [
     { h:"", cls:"pickcell", f:s=>`<input type="checkbox" data-pick="${esc(s.streamer_id)}">` },
+    // ปุ่มแก้/ลบไว้หน้าสุด (ถัดจากติ๊ก) จะได้ไม่ต้องเลื่อนจอไปทางขวาเพื่อกดทุกครั้ง
+    { h:"", f:s=>`<button class="sm icon" data-edit="${esc(s.streamer_id)}" type="button" title="แก้ไข" aria-label="แก้ไข">✏️</button>
+                  <button class="sm icon danger" data-del="${esc(s.streamer_id)}" type="button" title="ลบ" aria-label="ลบ">🗑️</button>` },
     { h:"ID", cls:"mono", f:s=>esc(s.streamer_id) },
     { h:"ชื่อในวงการ", f:s=>esc(s.streamer_name) },
     { h:"ชื่อตามกฎหมาย", f:s=>bilingual(s.legal_name, s.legal_name_th, '<span class="pill no">ขาด</span>') },
@@ -3207,15 +3237,19 @@ function render(){
     { h:"สถานะ", f:s=> String(s.active_status).toLowerCase()==="active"
         ? '<span class="pill ok">Active</span>' : `<span class="pill flat">${esc(s.active_status||"—")}</span>` },
     { h:"เพิ่ม/แก้ล่าสุด", cls:"mono", f:s=>esc(s.updated_at||"—") },
-    { h:"", f:s=>`<button class="sm" data-edit="${esc(s.streamer_id)}" type="button">แก้</button>
-                  <button class="sm danger" data-del="${esc(s.streamer_id)}" type="button">ลบ</button>` },
-  ], sortedStreamers, "ยังไม่มีสตรีมเมอร์ — กด “+ เพิ่มสตรีมเมอร์” หรือ “นำเข้า CSV”");
+  ], pageStreamers, "ยังไม่มีสตรีมเมอร์ — กด “+ เพิ่มสตรีมเมอร์” หรือ “นำเข้า CSV”");
   ts.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>openForm(b.dataset.edit)));
   ts.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>bulkDeleteStreamers([b.dataset.del])));
+
+  $("stPageInfo").textContent = `หน้า ${streamerPage}/${stTotalPages} · ทั้งหมด ${sortedStreamers.length} คน`;
+  $("stPagePrev").disabled = streamerPage <= 1;
+  $("stPageNext").disabled = streamerPage >= stTotalPages;
+  $("streamerPager").style.display = sortedStreamers.length > STREAMERS_PER_PAGE ? "flex" : "none";
 
   $("stBulk").style.display = DB.streamers.length ? "flex" : "none";
   if (DB.streamers.length){
     wireBulk({
+      // ids ใช้ทั้งชุดที่เรียงไว้ (ไม่ใช่แค่หน้าปัจจุบัน) — สลับหน้าไปมาแล้วของที่เลือกไว้ไม่หาย
       root: ts, ids: sortedStreamers.map(s=>s.streamer_id), picked: pickedStreamers,
       allBox: $("stPickAll"), countEl: $("stPickCount"), delBtn: $("stPickDelete"), bulkEl: $("stBulk"),
       label: n => n ? `ลบที่เลือก (${n})` : "ลบที่เลือก",
