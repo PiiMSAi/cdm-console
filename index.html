@@ -54,9 +54,6 @@
   details.fold>summary:hover{background:var(--plane); border-radius:11px}
   details.fold>summary .hint{font-weight:400}
   details.fold .foldbody{padding:0 18px 18px}
-  .allclear{display:flex; align-items:center; gap:10px; color:var(--ink-2); padding:6px 2px}
-  .allclear .tick{color:var(--good-ink); font-size:17px}
-
   button{font:inherit; cursor:pointer; border-radius:8px; border:1px solid var(--ring); background:transparent; color:var(--ink-2); padding:7px 13px; font-size:13px}
   button:hover{background:var(--plane)}
   button.primary{background:var(--accent); color:#fff; border-color:transparent; font-weight:500}
@@ -112,13 +109,32 @@
   }
   @keyframes beat{0%,100%{opacity:1}50%{opacity:.25}}
 
-  nav.tabs{display:flex; gap:2px; margin-bottom:16px; border-bottom:1px solid var(--grid); flex-wrap:wrap}
-  nav.tabs button{border:none; border-radius:0; background:none; padding:9px 14px; border-bottom:2px solid transparent; color:var(--ink-2); font-size:13.5px}
-  nav.tabs button.on{color:var(--ink); border-bottom-color:var(--accent); font-weight:600}
+  /* ══════════ sidebar ══════════ ซ้ายเป็นเมนู ขวาเป็นเนื้อหา — กว้างพอสมควรจะได้ไม่ต้องยุบ/ขยายกลุ่มเอง */
+  .shell{display:flex; gap:26px; align-items:flex-start}
+  .shell > .content{flex:1; min-width:0}
+  nav.tabs{display:flex; flex-direction:column; gap:1px; flex:none; width:196px;
+    position:sticky; top:16px; max-height:calc(100vh - 32px); overflow-y:auto;
+    border-bottom:none; border-right:1px solid var(--grid); padding-right:14px; margin-bottom:0}
+  nav.tabs .side-label{font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--muted); padding:16px 10px 4px}
+  nav.tabs .side-label:first-of-type{padding-top:2px}
+  nav.tabs button{border:none; border-radius:7px; background:none; padding:8px 10px; border-bottom:none;
+    color:var(--ink-2); font-size:13.5px; text-align:left; width:100%}
+  nav.tabs button:hover{background:var(--plane)}
+  nav.tabs button.on{color:var(--ink); background:color-mix(in srgb,var(--accent) 13%,transparent); font-weight:600}
   nav.tabs button .badge{display:inline-block; min-width:18px; padding:0 5px; margin-left:6px; border-radius:99px;
     background:var(--critical); color:#fff; font-size:11px; font-weight:700; text-align:center}
   nav.tabs button .badge.q{background:var(--muted)}
   .page{display:none} .page.on{display:block}
+  /* จอแคบ: เมนูซ้ายไม่พอที่ ยุบมาวางเป็นแถบเต็มความกว้างด้านบนเนื้อหาแทน ยังเป็นรายการแนวตั้งเหมือนเดิม */
+  @media (max-width:820px){
+    .shell{flex-direction:column; gap:14px}
+    nav.tabs{flex-direction:row; flex-wrap:wrap; width:100%; position:static; max-height:none; overflow-y:visible;
+      border-right:none; border-bottom:1px solid var(--grid); padding-right:0; padding-bottom:10px; gap:2px 4px}
+    nav.tabs .side-label{flex-basis:100%; padding:8px 4px 0}
+    nav.tabs .side-label:first-of-type{padding-top:0}
+    nav.tabs button{width:auto}
+  }
 
   .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px}
   .f{display:flex; flex-direction:column; gap:4px}
@@ -347,15 +363,28 @@
     </div>
   </header>
 
+  <div class="shell">
   <nav class="tabs" id="tabs">
     <button data-p="home" class="on" type="button">ภาพรวม</button>
-    <button data-p="streamers" type="button">สตรีมเมอร์</button>
+
+    <div class="side-label">สตรีมเมอร์</div>
+    <button data-p="streamers-add" type="button">เพิ่มสตรีมเมอร์ใหม่</button>
+    <button data-p="streamers-list" type="button">รายชื่อสตรีมเมอร์</button>
+
+    <div class="side-label">สัญญา</div>
     <button data-p="batch" type="button">สร้างรอบสัญญา</button>
-    <button data-p="check" type="button">ตรวจสอบ</button>
+    <button data-p="renew" type="button">ต่ออายุสัญญา</button>
     <button data-p="archive" type="button">คลังสัญญา</button>
-    <button data-p="push" type="button">ค้างส่ง</button>
-    <button data-p="settings" type="button">ตั้งค่า</button>
+
+    <div class="side-label">ต้องดำเนินการ</div>
+    <button data-p="pending" type="button">รอส่งขึ้นชีต</button>
+    <button data-p="preflight" type="button">ตรวจก่อนส่ง</button>
+    <button data-p="unsigned" type="button">ส่งแล้วยังไม่เซ็น</button>
+    <button data-p="dupes" type="button">รายการซ้ำ</button>
+
+    <button data-p="settings" type="button" style="margin-top:16px">ตั้งค่า</button>
   </nav>
+  <div class="content">
 
   <!-- ============== HOME ============== -->
   <div class="page on" id="p-home">
@@ -397,27 +426,13 @@
     </details>
   </div>
 
-  <!-- ============== STREAMERS ============== -->
-  <div class="page" id="p-streamers">
+  <!-- ============== STREAMERS: ADD/EDIT ============== -->
+  <div class="page" id="p-streamers-add">
     <div class="card">
-      <div class="spread" style="margin-bottom:14px">
-        <h2 style="margin:0">รายชื่อสตรีมเมอร์</h2>
-        <div class="row">
-          <button id="impStreamers" type="button">นำเข้า CSV</button>
-          <button id="expStreamers" type="button">ส่งออก CSV</button>
-          <button id="pushStreamers" type="button">ส่งขึ้นชีต</button>
-          <button class="primary" id="addStreamer" type="button">+ เพิ่มสตรีมเมอร์</button>
-        </div>
-      </div>
-      <p class="hint" id="pushStreamersStatus" style="margin:-6px 0 12px"></p>
-      <div class="row" style="margin-bottom:12px">
-        <span class="hint">เรียงตาม</span>
-        <button class="sm" id="sortByName" type="button">ชื่อ <span id="sortByNameArrow"></span></button>
-        <button class="sm" id="sortByDate" type="button">วันที่เพิ่ม/แก้ไขล่าสุด <span id="sortByDateArrow"></span></button>
-      </div>
+      <h2 id="streamerFormTitle" style="margin:0 0 14px">เพิ่มสตรีมเมอร์ใหม่</h2>
       <input type="file" id="fileStreamers" accept=".csv" style="display:none">
 
-      <div id="streamerForm" style="display:none">
+      <div id="streamerForm">
         <div class="grid">
           <div class="f"><label>streamer_id <span class="req">*</span></label><input id="s_id"></div>
           <div class="f"><label>ชื่อในวงการ <span class="req">*</span></label><input id="s_name"></div>
@@ -456,6 +471,27 @@
           เลขบัตรประชาชนจำเป็นเฉพาะสัญญา CDM/P2W ที่พิมพ์ลงในเอกสาร —
           สัญญา Cabal PH ไม่ใช้ ไม่ต้องกรอก ·
           <b>ห้ามกรอกเลขพาสปอร์ต เลขบัญชีธนาคาร หรือพร้อมเพย์</b> ไม่มีสัญญาฉบับไหนใช้</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== STREAMERS: LIST ============== -->
+  <div class="page" id="p-streamers-list">
+    <div class="card">
+      <div class="spread" style="margin-bottom:14px">
+        <h2 style="margin:0">รายชื่อสตรีมเมอร์</h2>
+        <div class="row">
+          <button id="impStreamers" type="button">นำเข้า CSV</button>
+          <button id="expStreamers" type="button">ส่งออก CSV</button>
+          <button id="pushStreamers" type="button">ส่งขึ้นชีต</button>
+          <button class="primary" id="addStreamer" type="button">+ เพิ่มสตรีมเมอร์</button>
+        </div>
+      </div>
+      <p class="hint" id="pushStreamersStatus" style="margin:-6px 0 12px"></p>
+      <div class="row" style="margin-bottom:12px">
+        <span class="hint">เรียงตาม</span>
+        <button class="sm" id="sortByName" type="button">ชื่อ <span id="sortByNameArrow"></span></button>
+        <button class="sm" id="sortByDate" type="button">วันที่เพิ่ม/แก้ไขล่าสุด <span id="sortByDateArrow"></span></button>
       </div>
 
       <div class="bulk" id="stBulk" style="display:none">
@@ -531,18 +567,8 @@
     </div>
   </div>
 
-  <!-- ============== CHECK ============== -->
-  <div class="page" id="p-check">
-    <div class="card">
-      <h2>แถวในชีตที่สั่ง generate ไว้</h2>
-      <p class="sub" style="margin:-6px 0 12px">ตรวจด้วยกฎเดียวกับ n8n WF-01 — แถวที่ “ไม่ผ่าน” จะถูกตีกลับเป็น <span class="mono">ERROR</span></p>
-      <div class="scroll"><table id="tPreflight"></table></div>
-    </div>
-    <div class="allclear" id="allClear">
-      <span class="tick">✓</span>
-      <div>ไม่พบปัญหา — ไม่มีสัญญาที่ต้องแก้ ไม่มีของใกล้หมดอายุ ไม่มีรายการซ้ำ</div>
-    </div>
-
+  <!-- ============== RENEW (สัญญาใกล้หมดอายุ) ============== -->
+  <div class="page" id="p-renew">
     <div class="card action">
       <h2>⚠ สัญญาใกล้หมดอายุ — ต้องดำเนินการ</h2>
       <p class="sub" style="margin:-6px 0 12px">เฉพาะ <span class="mono">GENERATED</span> / <span class="mono">SIGNED</span> · เตือน 30 / 14 / 7 วัน ·
@@ -552,16 +578,6 @@
         <span id="renewCount" class="hint"></span>
         <button class="primary sm" id="renewGo" type="button">ต่ออายุที่เลือกไว้</button>
       </div>
-    </div>
-    <div class="card">
-      <h2>ส่งแล้วยังไม่เซ็น</h2>
-      <p class="sub" style="margin:-6px 0 12px">เฉพาะ <span class="mono">SENT</span> · 3 วัน → เตือนแรก, 7 วัน → ครั้งที่สอง, 14 วัน → แจ้งผู้ดูแล</p>
-      <div class="scroll"><table id="tUnsigned"></table></div>
-    </div>
-    <div class="card">
-      <h2>สัญญาที่อาจซ้ำ</h2>
-      <p class="sub" style="margin:-6px 0 12px">เทียบ streamer + project + ชุดเอกสาร + ช่วงวันที่ (รวมแถวที่ยังรอส่งขึ้นชีตด้วย)</p>
-      <div class="scroll"><table id="tDupes"></table></div>
     </div>
   </div>
 
@@ -574,14 +590,20 @@
     </div>
   </div>
 
-  <!-- ============== PUSH ============== -->
-  <div class="page" id="p-push">
+  <!-- ============== ACTION NEEDED: PENDING ============== -->
+  <div class="page" id="p-pending">
     <div class="card">
       <div class="spread" style="margin-bottom:12px">
         <h2 style="margin:0">แถวที่ยังไม่ได้ขึ้นชีต</h2>
         <button id="clearRows" class="danger" type="button">ล้างทั้งหมด</button>
       </div>
+      <p class="sub" style="margin:-6px 0 12px">สร้างสัญญาไว้ในเครื่องนี้ แต่ยังส่งขึ้น Google Sheet ไม่สำเร็จ (เช่นเน็ตหลุดตอนกดส่ง) —
+        ปกติหน้า “สร้างรอบสัญญา” ส่งให้เองอยู่แล้ว หน้านี้ไว้กดส่งซ้ำ</p>
       <div class="scroll"><table id="tPending"></table></div>
+      <div class="row" style="margin-top:12px">
+        <button class="primary" id="pushBtn" type="button">ส่งขึ้น Google Sheets</button>
+        <span class="hint" id="pushStatus"></span>
+      </div>
     </div>
 
     <details class="card fold">
@@ -598,15 +620,32 @@
         แถวเรียงตามหัวคอลัมน์มาตรฐาน 37 ช่อง ถ้าเคยแทรก/สลับคอลัมน์เองในชีต การวางจะเพี้ยน</div>
       </div>
     </details>
+  </div>
 
+  <!-- ============== ACTION NEEDED: PREFLIGHT ============== -->
+  <div class="page" id="p-preflight">
     <div class="card">
-      <h2>ส่งขึ้นชีต</h2>
-      <p class="sub" style="margin:-6px 0 12px">ปกติหน้า “สร้างรอบสัญญา” ส่งให้เองอยู่แล้ว —
-        หน้านี้ไว้กดส่งซ้ำเมื่อครั้งก่อนไม่สำเร็จ</p>
-      <div class="row">
-        <button class="primary" id="pushBtn" type="button">ส่งขึ้น Google Sheets</button>
-        <span class="hint" id="pushStatus"></span>
-      </div>
+      <h2>แถวในชีตที่สั่ง generate ไว้</h2>
+      <p class="sub" style="margin:-6px 0 12px">ตรวจด้วยกฎเดียวกับ n8n WF-01 — แถวที่ “ไม่ผ่าน” จะถูกตีกลับเป็น <span class="mono">ERROR</span></p>
+      <div class="scroll"><table id="tPreflight"></table></div>
+    </div>
+  </div>
+
+  <!-- ============== ACTION NEEDED: UNSIGNED ============== -->
+  <div class="page" id="p-unsigned">
+    <div class="card">
+      <h2>ส่งแล้วยังไม่เซ็น</h2>
+      <p class="sub" style="margin:-6px 0 12px">เฉพาะ <span class="mono">SENT</span> · 3 วัน → เตือนแรก, 7 วัน → ครั้งที่สอง, 14 วัน → แจ้งผู้ดูแล</p>
+      <div class="scroll"><table id="tUnsigned"></table></div>
+    </div>
+  </div>
+
+  <!-- ============== ACTION NEEDED: DUPES ============== -->
+  <div class="page" id="p-dupes">
+    <div class="card">
+      <h2>สัญญาที่อาจซ้ำ</h2>
+      <p class="sub" style="margin:-6px 0 12px">เทียบ streamer + project + ชุดเอกสาร + ช่วงวันที่ (รวมแถวที่ยังรอส่งขึ้นชีตด้วย)</p>
+      <div class="scroll"><table id="tDupes"></table></div>
     </div>
   </div>
 
@@ -707,6 +746,8 @@
       <p class="hint" style="margin-top:10px">เก็บในเบราว์เซอร์เครื่องนี้เท่านั้น ถ้าล้างข้อมูลเบราว์เซอร์จะหายหมด — สำรองไว้เป็นระยะ</p>
       </div>
     </details>
+  </div>
+  </div>
   </div>
 </div>
 
@@ -1336,7 +1377,10 @@ let streamerPage = 1;
 $("stPagePrev").addEventListener("click", () => { streamerPage--; render(); });
 $("stPageNext").addEventListener("click", () => { streamerPage++; render(); });
 $("addStreamer").addEventListener("click", () => openForm(null));
-$("cancelStreamer").addEventListener("click", () => { $("streamerForm").style.display="none"; editingId=null; });
+$("cancelStreamer").addEventListener("click", () => {
+  editingId = null;
+  $("tabs").querySelector('button[data-p="streamers-list"]').click();
+});
 
 /** อักษรนำหน้าจากชื่อช่อง — เอาเฉพาะ A-Z 0-9 เพราะ id เป็นคีย์เชื่อมสองชีต
     ต้องพิมพ์ซ้ำได้ ไม่มีอักขระกำกวม ชื่อไทยล้วนจะได้ STR ตามเดิม */
@@ -1380,7 +1424,8 @@ function openForm(id){
   $("s_dwallet").value  = s?.default_wallet_points || "";
   $("s_dclips").value   = s?.default_clips_per_month || "";
   $("sFormHint").textContent = s ? "กำลังแก้ไข " + s.streamer_id : "id สร้างจากชื่อช่องให้อัตโนมัติ แก้เองได้";
-  $("streamerForm").style.display = "block";
+  $("streamerFormTitle").textContent = s ? `แก้ไขสตรีมเมอร์ — ${s.streamer_name || s.streamer_id}` : "เพิ่มสตรีมเมอร์ใหม่";
+  $("tabs").querySelector('button[data-p="streamers-add"]').click();
   $("s_name").focus();
 }
 /* พิมพ์ชื่อช่อง → ตั้ง id ให้เอง จนกว่าผู้ใช้จะแก้ id เอง แล้วจะไม่ไปยุ่งอีก
@@ -1424,7 +1469,8 @@ $("saveStreamer").addEventListener("click", () => {
   if (editingId) DB.streamers[DB.streamers.findIndex(s=>s.streamer_id===editingId)] = rec;
   else DB.streamers.push(rec);
   const wasEditing = !!editingId;
-  save(); $("streamerForm").style.display="none"; editingId=null; render();
+  save(); editingId=null; render();
+  $("tabs").querySelector('button[data-p="streamers-list"]').click();
 
   /* คนที่อยู่ในชีตแล้วต้องเขียนกลับด้วย ไม่งั้น n8n ยังใช้ข้อมูลเก่า
      คนใหม่ก็ส่งขึ้นทันทีเหมือนกัน — เดิมรอไปพ่วงกับการส่งสัญญารอบแรก แต่พอใช้กันหลายเครื่อง
@@ -2020,7 +2066,7 @@ $("makeBatch").addEventListener("click", async () => {
 
   if (!cfgReady()){
     // ยังไม่ได้ต่อ Apps Script — ตกกลับไปทางเดิม คัดลอกไปวางในชีตเอง
-    $("tabs").querySelector('button[data-p="push"]').click();
+    $("tabs").querySelector('button[data-p="pending"]').click();
     toast(`สร้างแล้ว ${made.length} สัญญาในรอบ ${bid}\nยังไม่ได้ตั้งค่า Apps Script — คัดลอกไปวางในชีตเองที่หน้านี้`);
     return;
   }
@@ -2075,7 +2121,7 @@ $("renewGo").addEventListener("click", async () => {
   renewSel = {}; render();
 
   if (!cfgReady()){
-    $("tabs").querySelector('button[data-p="push"]').click();
+    $("tabs").querySelector('button[data-p="pending"]').click();
     toast(`สร้างแล้ว ${built.length} สัญญาต่ออายุ\nยังไม่ได้ตั้งค่า Apps Script — คัดลอกไปวางในชีตเองที่หน้านี้`);
     return;
   }
@@ -2166,7 +2212,7 @@ async function pushPending(){
       say(`ส่งสำเร็จ ${sentCount} แถว — ชนกับที่คนอื่นส่งพร้อมกัน ${collided.length} แถว ออกเลขใหม่ให้แล้ว`);
       toast(`มีสัญญา ${collided.length} ฉบับชนเลขกับที่คนอื่นในทีมกดส่งพร้อมกันพอดี\n` +
         `ข้อมูลไม่ได้หาย — ออกเลขสัญญาใหม่ให้แล้วในแท็บ "ค้างส่ง" กดส่งขึ้นชีตซ้ำอีกครั้งได้เลย`, "bad", 9000);
-      $("tabs").querySelector('button[data-p="push"]').click();
+      $("tabs").querySelector('button[data-p="pending"]').click();
       return false;
     }
 
@@ -2176,7 +2222,7 @@ async function pushPending(){
     say("ส่งไม่สำเร็จ: " + err.message);
     toast("ส่งขึ้นชีตไม่สำเร็จ: " + err.message +
       "\nแถวยังอยู่ครบในแท็บ “ค้างส่ง” กดส่งซ้ำได้ ไม่ต้องกรอกใหม่", "bad");
-    $("tabs").querySelector('button[data-p="push"]').click();
+    $("tabs").querySelector('button[data-p="pending"]').click();
     return false;
   }
 }
@@ -3402,17 +3448,12 @@ function render(){
     `<div class="empty">ยังไม่มีข้อมูลจากชีต — กด “ดึงข้อมูลจากชีต” ด้านบน หรือนำเข้า CSV ที่แท็บ “ตั้งค่า”</div>`;
 
   /* ---- ซ่อนการ์ดที่ยังไม่มีข้อมูล ----
-     ของ Phase 2 (หมดอายุ / รอเซ็น / ซ้ำ) จะว่างตลอดจนกว่าจะเริ่มใช้จริง
-     ซ่อนไว้ก่อนแล้วให้โผล่เองเมื่อมีแถวจริง จะได้ไม่รกจอ */
+     ใช้เฉพาะการ์ดที่ยังอยู่ร่วมหน้ากับการ์ดอื่น (เช่น pipeBar ในหน้าภาพรวม) — พวกที่แยกเป็นหน้าของตัวเองแล้ว
+     (ใกล้หมดอายุ/รอเซ็น/ซ้ำ) ไม่ซ่อนอีกต่อไป เพราะซ่อนทั้งการ์ดจะเหลือแค่หน้าเปล่า ๆ ให้ตารางแสดงข้อความว่างเองแทน */
   const showIf = (elId, yes) => {
     const card = $(elId)?.closest(".card"); if (card) card.style.display = yes ? "" : "none";
   };
-  showIf("tExpiry",   expiring.length);
-  showIf("tUnsigned", unsigned.length);
-  showIf("tDupes",    dupes.length);
   showIf("pipeBar",   tracker.length);
-  $("allClear").style.display =
-    (expiring.length || unsigned.length || dupes.length || requested.length) ? "none" : "";
 
   /* ---- tiles ---- */
   const errCount = tracker.filter(r=>up(r.status)==="ERROR").length;
@@ -3428,7 +3469,7 @@ function render(){
   DRILL.exp7      = { title:"หมดอายุใน 7 วัน",   rows:expiring.filter(x=>x.d<=7).map(x=>x.r) };
 
   $("tiles").innerHTML = [
-    { l:"สตรีมเมอร์", v:DB.streamers.length, h:`Active ${DB.streamers.filter(s=>String(s.active_status).toLowerCase()==="active").length} คน`, c:"--s3", always:1, g:"streamers" },
+    { l:"สตรีมเมอร์", v:DB.streamers.length, h:`Active ${DB.streamers.filter(s=>String(s.active_status).toLowerCase()==="active").length} คน`, c:"--s3", always:1, g:"streamers-list" },
     { l:"ค้างส่ง", v:DB.pending.length, h:"ยังไม่ขึ้นชีต", c:"--accent", d:"pending" },
     { l:"สั่ง generate", v:requested.length, h:"รอ n8n ทำงาน", c:"--s4", always:1, d:"requested" },
     { l:"ติดปัญหา", v:failing.length, h:"n8n จะตีกลับ", c:"--critical", d:"failing" },
@@ -3454,9 +3495,10 @@ function render(){
     b.querySelector(".badge")?.remove();
     if (n>0) b.insertAdjacentHTML("beforeend", `<span class="badge${quiet?" q":""}">${n}</span>`);
   };
-  setBadge("check", failing.length + exp7);
+  setBadge("preflight", failing.length);
+  setBadge("renew", exp7);
   setBadge("home", errCount, true);
-  setBadge("push", DB.pending.length, true);
+  setBadge("pending", DB.pending.length, true);
 
   /* ---- summary ---- */
   const L = ["DAILY CONTRACT SUMMARY — " + ($("refDate").value||todayISO()), ""];
