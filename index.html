@@ -3344,7 +3344,10 @@ $("b_start").value = todayISO();
 render();
 syncAuto();   // เปิดตัวจับเวลาอัปเดตอัตโนมัติถ้าเคยเปิดค้างไว้
 // ดึงหนึ่งครั้งตอนเปิดหน้า — เปิดมาแล้วต้องเห็นของจริง ไม่ใช่ของค้างจากรอบก่อน
-if (DB.cfg.autoPull) pullIfStale(0);
+// เบราว์เซอร์/โดเมนที่เพิ่งเปิดเป็นครั้งแรก (เช่น public link ที่เพิ่งแจกให้ทีม) localStorage ว่างเปล่า
+// ต่อให้ DEFAULT_CFG เติม url/secret มาให้พร้อมใช้แล้ว ก็ยังต้องดึงเองครั้งแรกอยู่ดีถ้ารอ autoPull ที่ยังไม่เคยติ๊ก
+// เลยดึงทันทีเมื่อพร้อมยิง request ได้ (cfgReady) แต่ยังไม่เคยดึงบนเครื่อง/โดเมนนี้เลย (fetchedAt ว่าง)
+if (DB.cfg.autoPull || (cfgReady() && !DB.sheet.fetchedAt)) pullIfStale(0);
 </script>
 </body>
 </html>
