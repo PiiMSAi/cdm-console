@@ -1581,7 +1581,8 @@ function pickerRows(){
     if (selected[s.streamer_id]) return true;      // คนที่เลือกไว้แล้วต้องไม่หายไปเพราะตัวกรอง
     if (only) return false;
     if (String(s.active_status).toLowerCase() !== "active") return false;
-    if (proj && cur && String(s.project || "").trim() !== cur) return false;
+    // project ของสตรีมเมอร์คั่นด้วยคอมมาได้ (เช่น "P2W,CDM") ถ้าอยู่หลายโปรเจกต์พร้อมกัน
+    if (proj && cur && !String(s.project || "").split(",").map(x=>x.trim()).includes(cur)) return false;
     return hit(s);
   });
 }
