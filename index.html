@@ -11,7 +11,7 @@
     --ink:#0b0b0b; --ink-2:#52514e; --muted:#898781;
     --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,0.10);
     --good:#0ca30c; --warning:#fab219; --serious:#ec835a; --critical:#d03b3b;
-    --good-ink:#006300; --warning-ink:#8a6100; --critical-ink:#a52a2a;
+    --good-ink:#006300; --warning-ink:#8a6100; --serious-ink:#b34e1f; --critical-ink:#a52a2a;
     --s1:#86b6ef; --s2:#5598e7; --s3:#3987e5; --s4:#256abf; --s5:#184f95; --s6:#0d366b;
     --accent:#2a78d6; --code-bg:#f0efec;
   }
@@ -21,7 +21,7 @@
       --plane:#0d0d0d; --surface:#1a1a19;
       --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781;
       --grid:#2c2c2a; --axis:#383835; --ring:rgba(255,255,255,0.10);
-      --good-ink:#0ca30c; --warning-ink:#fab219; --critical-ink:#e66767;
+      --good-ink:#0ca30c; --warning-ink:#fab219; --serious-ink:#ec835a; --critical-ink:#e66767;
       --s1:#cde2fb; --s2:#9ec5f4; --s3:#6da7ec; --s4:#3987e5; --s5:#256abf; --s6:#184f95;
       --accent:#3987e5; --code-bg:#242422;
     }
@@ -143,6 +143,9 @@
   .pill.no{color:var(--critical-ink); background:color-mix(in srgb,var(--critical) 14%,transparent); border-color:color-mix(in srgb,var(--critical) 40%,transparent)}
   .pill.mid{color:var(--warning-ink); background:color-mix(in srgb,var(--warning) 18%,transparent); border-color:color-mix(in srgb,var(--warning) 45%,transparent)}
   .pill.flat{color:var(--ink-2); background:var(--plane); border-color:var(--ring)}
+  /* สีส้ม เฉพาะเรื่องที่ต้อง Take Action จริง ๆ (เช่น สัญญาใกล้หมดอายุ) แยกจาก .mid (เหลือง=สังเกต) ให้เด่นกว่า */
+  .pill.action{color:var(--serious-ink); background:color-mix(in srgb,var(--serious) 20%,transparent); border-color:color-mix(in srgb,var(--serious) 50%,transparent); font-weight:700}
+  .card.action{border-left:3px solid var(--serious)}
 
   .tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:12px; margin-bottom:16px}
   .tile{background:var(--surface); border:1px solid var(--ring); border-radius:11px; padding:14px 16px}
@@ -540,8 +543,8 @@
       <div>ไม่พบปัญหา — ไม่มีสัญญาที่ต้องแก้ ไม่มีของใกล้หมดอายุ ไม่มีรายการซ้ำ</div>
     </div>
 
-    <div class="card">
-      <h2>สัญญาใกล้หมดอายุ</h2>
+    <div class="card action">
+      <h2>⚠ สัญญาใกล้หมดอายุ — ต้องดำเนินการ</h2>
       <p class="sub" style="margin:-6px 0 12px">เฉพาะ <span class="mono">GENERATED</span> / <span class="mono">SIGNED</span> · เตือน 30 / 14 / 7 วัน ·
         ติ๊กเพื่อต่ออายุ ไม่ติ๊ก = ปล่อยให้หมดสัญญา</p>
       <div class="scroll"><table id="tExpiry"></table></div>
@@ -2440,6 +2443,23 @@ $("scanOrphanBtn").addEventListener("click", scanOrphans);
 
 /* ══════════ สั่ง n8n ทำงาน ══════════ */
 let runInFlight = false;
+
+/** ดึงชีตซ้ำเป็นระยะจนกว่าจะไม่มีแถวไหนค้างให้ n8n ทำอยู่แล้ว (สูงสุด ~2 นาที)
+    เดิมดึงแค่ 2 ครั้งตายตัวที่ 8 กับ 25 วินาทีหลังสั่งงาน — พอสำหรับสัญญาเดี่ยว แต่รอบที่มีหลายสัญญา
+    (n8n ทำทีละใบ) มักไม่เสร็จทันใน 25 วิ ทำให้ผู้ใช้เห็นข้อมูลค้างแล้วต้องกดดึงเองอยู่ดี */
+let pollTimer = null;
+function pollForCompletion(){
+  clearTimeout(pollTimer);
+  const deadline = Date.now() + 120000;
+  const tick = async () => {
+    await pullFromSheet(true);
+    const stillGoing = DB.sheet.tracker.some(r => up(r.status)==="GENERATING" || up(r.generation_requested)==="YES");
+    if (!stillGoing || Date.now() >= deadline) return;
+    pollTimer = setTimeout(tick, 6000);
+  };
+  pollTimer = setTimeout(tick, 5000);   // เผื่อเวลาให้ n8n claim แถวแรกก่อนเช็ครอบแรก
+}
+
 async function runWorkflow(btn){
   if (blank(DB.cfg.hook)){ toast("ยังไม่ได้ตั้งค่า Webhook — ไปที่แท็บ “ตั้งค่า”","bad"); return false; }
   // สองรอบวิ่งพร้อมกันจะเห็นแถวเดียวกันที่ยังเป็น YES แล้วสร้างเอกสารซ้ำ
@@ -2458,8 +2478,7 @@ async function runWorkflow(btn){
     if (!res.ok) throw new Error("n8n ตอบกลับ " + res.status);
     btn.textContent = "สั่งแล้ว";
     // n8n ทำงานเป็นรอบ ไม่ตอบกลับตอนเสร็จ จึงต้องตามไปดึงผลเอง
-    setTimeout(() => pullFromSheet(true), 8000);
-    setTimeout(() => pullFromSheet(true), 25000);
+    pollForCompletion();
     return true;
   } catch(err){
     toast("สั่งไม่สำเร็จ: " + err.message +
@@ -3300,17 +3319,21 @@ function render(){
   Object.keys(renewSel).forEach(cid => { if (!expiring.some(x=>x.r.contract_id===cid)) delete renewSel[cid]; });
   tbl($("tExpiry"), [
     { h:"", cls:"pickcell", f:x=>`<input type="checkbox" data-renew="${esc(x.r.contract_id)}" ${renewSel[x.r.contract_id]?"checked":""}>` },
+    // ปุ่มแก้เป็นไอคอนแยกต่างหาก — เดิมทั้งแถวกดแล้วเปิดแก้ไข ซึ่งชนกับช่องติ๊ก/กรอกเดือนที่อยู่ในแถวเดียวกัน
+    { h:"", f:x=> cfgReady() ? `<button class="sm icon" data-editexp="${esc(x.r.contract_id)}" type="button" title="แก้ไข" aria-label="แก้ไข">✏️</button>` : "" },
     { h:"Contract ID", cls:"mono", f:x=>esc(x.r.contract_id) },
     { h:"สตรีมเมอร์", f:x=>esc(x.r.streamer_name||x.r.streamer_id) },
     { h:"วันหมดอายุ", cls:"mono", f:x=>esc(fmtDMY(x.r.contract_end)) },
     { h:"เหลือ", cls:"num", f:x=> x.d<0 ? `${Math.abs(x.d)} วันที่แล้ว` : `${x.d} วัน` },
+    // ทั้งหมดที่ขึ้นตรงนี้คือ ≤30 วัน = ต้องดำเนินการแล้ว ใช้สีส้มให้เห็นชัดตรงกัน ยกเว้นหมดอายุแล้วซึ่งหนักกว่าจึงยังแดง
     { h:"ระดับ", f:x=> x.d<0 ? '<span class="pill no">✕ หมดอายุแล้ว</span>'
-        : x.d<=7 ? '<span class="pill no">✕ เตือน 7 วัน</span>'
-        : x.d<=14 ? '<span class="pill mid">! เตือน 14 วัน</span>' : '<span class="pill flat">• เตือน 30 วัน</span>' },
+        : x.d<=7 ? '<span class="pill action">⚠ เตือน 7 วัน</span>'
+        : x.d<=14 ? '<span class="pill action">⚠ เตือน 14 วัน</span>' : '<span class="pill action">⚠ เตือน 30 วัน</span>' },
     { h:"ต่อกี่เดือน", f:x=>`<input type="number" min="1" max="36" style="width:64px" data-renewmonths="${esc(x.r.contract_id)}"
         value="${renewSel[x.r.contract_id] ?? monthsOf(x.r.contract_start, x.r.contract_end)}" ${renewSel[x.r.contract_id]?"":"disabled"}>` },
   ], expiring, "ไม่มีสัญญาใกล้หมดอายุใน 30 วัน");
-  rowsOpenEdit($("tExpiry"), expiring, x => x.r.contract_id);
+  $("tExpiry").querySelectorAll("[data-editexp]").forEach(b =>
+    b.addEventListener("click", () => openEdit(b.dataset.editexp)));
   $("tExpiry").querySelectorAll("[data-renew]").forEach(cb =>
     cb.addEventListener("change", () => {
       const cid = cb.dataset.renew;
