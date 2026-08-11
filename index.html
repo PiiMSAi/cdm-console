@@ -661,7 +661,7 @@
     <details class="card fold">
       <summary>นำเข้าข้อมูลจากไฟล์ CSV <span class="hint">— ใช้ตอนย้ายข้อมูลครั้งแรก</span></summary>
       <div class="foldbody">
-      <p class="sub" style="margin:-6px 0 12px">ใช้เมื่อยังไม่ได้ตั้ง Apps Script — export จากชีตแล้วลากมาวางได้หลายไฟล์พร้อมกัน</p>
+      <p class="sub" style="margin:-6px 0 12px">export จากชีตแล้วลากมาวางได้หลายไฟล์พร้อมกัน — ถ้ามีไฟล์ Streamer_Master ด้วยและตั้งค่า Apps Script ไว้แล้ว จะส่งขึ้นชีตให้เลยอัตโนมัติ</p>
       <div id="drop" style="border:1.5px dashed var(--axis); border-radius:9px; padding:20px; text-align:center; cursor:pointer">
         <b>ลากไฟล์ CSV มาวาง หรือคลิกเลือก</b>
         <div class="hint" style="margin-top:4px">Contract_Tracker · Streamer_Master · Project_Master · Contract_Template_Master</div>
@@ -1399,10 +1399,30 @@ $("saveStreamer").addEventListener("click", () => {
         "\nข้อมูลในเครื่องนี้บันทึกแล้ว แต่ในชีตยังไม่มี — เครื่องอื่นจะยังไม่เห็นจนกว่าจะลองใหม่", "bad"));
   }
 });
+/* ส่งสตรีมเมอร์ทั้งก้อนในเครื่องขึ้นชีต — ใช้ทั้งตอนนำเข้า CSV (อัตโนมัติ) และปุ่ม "ส่งขึ้นชีต" (มือ)
+   คนที่เคยส่งไปแล้วจะถูกข้ามให้เอง (skippedStreamers) ไม่ใช่ error ไม่ต้องกลัวส่งซ้ำ */
+async function pushStreamersNow(){
+  if (!cfgReady()) return { ok:false, reason:"noConfig" };
+  if (!DB.streamers.length) return { ok:false, reason:"empty" };
+  const say = t => { const el = $("pushStreamersStatus"); if (el) el.textContent = t; };
+  say("กำลังส่งขึ้นชีต...");
+  try{
+    const out = await callScript({ action:"write", contracts:[], streamers:DB.streamers,
+      contractCols:TRACKER_COLS, streamerCols:STREAMER_COLS });
+    if (!out.ok) throw new Error(out.error || "ไม่ทราบสาเหตุ");
+    say(`ส่งขึ้นชีตแล้ว — เพิ่มใหม่ ${out.streamersAdded} คน (คนที่มีอยู่แล้วถูกข้ามให้เอง ไม่ซ้ำ)`);
+    pullFromSheet(true);
+    return { ok:true, added: out.streamersAdded };
+  } catch(err){
+    say("ส่งขึ้นชีตไม่สำเร็จ: " + err.message);
+    return { ok:false, reason:"error", error: err.message };
+  }
+}
+
 $("impStreamers").addEventListener("click", () => $("fileStreamers").click());
 $("fileStreamers").addEventListener("change", e => {
   const f = e.target.files[0]; if (!f) return;
-  f.text().then(t => {
+  f.text().then(async t => {
     const objs = csvToObjects(t, "streamer_id");
     if (!objs) return toast("ไม่พบคอลัมน์ streamer_id","bad");
     let a=0,u=0;
@@ -1412,7 +1432,16 @@ $("fileStreamers").addEventListener("change", e => {
       const i = DB.streamers.findIndex(s=>s.streamer_id===rec.streamer_id);
       if (i>=0){ DB.streamers[i]=rec; u++; } else { DB.streamers.push(rec); a++; }
     });
-    save(); render(); toast(`นำเข้าแล้ว — เพิ่ม ${a} คน, อัปเดต ${u} คน`,"ok");
+    save(); render();
+    if (!cfgReady()){
+      toast(`นำเข้าแล้ว — เพิ่ม ${a} คน, อัปเดต ${u} คน\nยังไม่ได้ตั้งค่า Apps Script — บันทึกไว้ในเครื่องนี้ก่อน`,"ok");
+      return;
+    }
+    // นำเข้าแล้วส่งขึ้นชีตต่อให้เลย ไม่ต้องกดปุ่มแยกอีกขั้น
+    const r = await pushStreamersNow();
+    toast(r.ok
+      ? `นำเข้าแล้ว — เพิ่ม ${a} คน, อัปเดต ${u} คน · ส่งขึ้นชีตแล้ว`
+      : `นำเข้าแล้ว — เพิ่ม ${a} คน, อัปเดต ${u} คน · ส่งขึ้นชีตไม่สำเร็จ: ${r.error || ""}\nกด “ส่งขึ้นชีต” เพื่อลองใหม่ได้`, r.ok ? "ok" : "bad");
   });
   e.target.value="";
 });
@@ -1421,24 +1450,12 @@ $("expStreamers").addEventListener("click", () => {
     [STREAMER_COLS.join(",")].concat(DB.streamers.map(s=>STREAMER_COLS.map(k=>csvCell(s[k])).join(","))).join("\n"));
 });
 
-/* นำเข้า CSV/เพิ่มทีละคนแค่บันทึกในเครื่อง — สตรีมเมอร์จะขึ้นชีตจริงก็ต่อเมื่อมีคนสร้างสัญญาให้เขา
-   (ตอนนั้น pushPending() จะพ่วง DB.streamers ทั้งก้อนไปด้วย) ปุ่มนี้เอาไว้กดส่งเองตรง ๆ
-   เวลานำเข้าทีละหลายร้อยคนแล้วอยากให้เครื่องอื่นเห็นทันที ไม่ต้องรอสร้างสัญญาให้ครบทุกคนก่อน */
 $("pushStreamers").addEventListener("click", async () => {
-  if (!cfgReady()){ toast("ยังไม่ได้ตั้งค่า Apps Script ที่แท็บ “ตั้งค่า”","bad"); return; }
-  if (!DB.streamers.length){ toast("ยังไม่มีสตรีมเมอร์ในเครื่องนี้"); return; }
-  const say = t => { $("pushStreamersStatus").textContent = t; };
-  say("กำลังส่ง...");
-  try{
-    const out = await callScript({ action:"write", contracts:[], streamers:DB.streamers,
-      contractCols:TRACKER_COLS, streamerCols:STREAMER_COLS });
-    if (!out.ok) throw new Error(out.error || "ไม่ทราบสาเหตุ");
-    // skippedStreamers ตรงนี้ปกติมาก — คือคนที่เคยส่งไปแล้วก่อนหน้า ไม่ใช่ error
-    say(`ส่งแล้ว — เพิ่มใหม่ ${out.streamersAdded} คน (คนที่มีอยู่แล้วในชีตถูกข้ามให้เอง ไม่ซ้ำ)`);
-    pullFromSheet(true);
-  } catch(err){
-    say("ส่งไม่สำเร็จ: " + err.message);
-    toast("ส่งขึ้นชีตไม่สำเร็จ: " + err.message, "bad");
+  const r = await pushStreamersNow();
+  if (!r.ok){
+    if (r.reason === "noConfig") toast("ยังไม่ได้ตั้งค่า Apps Script ที่แท็บ “ตั้งค่า”","bad");
+    else if (r.reason === "empty") toast("ยังไม่มีสตรีมเมอร์ในเครื่องนี้");
+    else toast("ส่งขึ้นชีตไม่สำเร็จ: " + r.error, "bad");
   }
 });
 
@@ -2531,12 +2548,17 @@ function handleFiles(files){
       });
     }
     return { file:f.name, sheet:name };
-  }))).then(res => {
+  }))).then(async res => {
     const bad = res.filter(r=>!r.sheet);
     DB.sheet.fetchedAt = new Date().toLocaleString("th-TH");
     DB.sheet.source = "ไฟล์ CSV";
     save(); render();
     if (bad.length) toast("ไม่รู้จักไฟล์: " + bad.map(b=>b.file).join(", "),"bad");
+    // ถ้าไฟล์ที่ลากมามี Streamer_Master ด้วย และตั้งค่า Apps Script ไว้แล้ว ส่งขึ้นชีตต่อให้เลย
+    if (cfgReady() && res.some(r=>r.sheet==="Streamer_Master")){
+      const r = await pushStreamersNow();
+      if (r.ok) toast(`ส่งสตรีมเมอร์ขึ้นชีตแล้ว — เพิ่มใหม่ ${r.added} คน`,"ok");
+    }
   });
   $("fileMulti").value = "";
 }
