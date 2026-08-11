@@ -348,6 +348,7 @@
     <button data-p="streamers" type="button">สตรีมเมอร์</button>
     <button data-p="batch" type="button">สร้างรอบสัญญา</button>
     <button data-p="check" type="button">ตรวจสอบ</button>
+    <button data-p="archive" type="button">คลังสัญญา</button>
     <button data-p="push" type="button">ค้างส่ง</button>
     <button data-p="settings" type="button">ตั้งค่า</button>
   </nav>
@@ -405,6 +406,11 @@
         </div>
       </div>
       <p class="hint" id="pushStreamersStatus" style="margin:-6px 0 12px"></p>
+      <div class="row" style="margin-bottom:12px">
+        <span class="hint">เรียงตาม</span>
+        <button class="sm" id="sortByName" type="button">ชื่อ <span id="sortByNameArrow"></span></button>
+        <button class="sm" id="sortByDate" type="button">วันที่เพิ่ม/แก้ไขล่าสุด <span id="sortByDateArrow"></span></button>
+      </div>
       <input type="file" id="fileStreamers" accept=".csv" style="display:none">
 
       <div id="streamerForm" style="display:none">
@@ -547,6 +553,15 @@
       <h2>สัญญาที่อาจซ้ำ</h2>
       <p class="sub" style="margin:-6px 0 12px">เทียบ streamer + project + ชุดเอกสาร + ช่วงวันที่ (รวมแถวที่ยังรอส่งขึ้นชีตด้วย)</p>
       <div class="scroll"><table id="tDupes"></table></div>
+    </div>
+  </div>
+
+  <!-- ============== ARCHIVE ============== -->
+  <div class="page" id="p-archive">
+    <div class="card">
+      <h2>คลังสัญญาที่สร้างแล้ว</h2>
+      <p class="sub" style="margin:-6px 0 12px">แยกตามโปรเจกต์ แล้วแยกเป็นรอบสัญญา (batch) ข้างในแต่ละโปรเจกต์ — กดที่หัวรอบเพื่อดูรายชื่อ</p>
+      <div id="archiveBox"></div>
     </div>
   </div>
 
@@ -1286,6 +1301,24 @@ $("themeBtn").addEventListener("click", () => {
 
 /* ══════════ streamers CRUD ══════════ */
 let editingId = null;
+/* updated_at คือ "แก้ล่าสุด" ไม่ใช่ "สร้างเมื่อ" จริง ๆ (สคีมาไม่มีคอลัมน์แยก) แต่สำหรับคนที่เพิ่งนำเข้า/เพิ่มมาแล้วยังไม่มีใครแตะ ก็เท่ากับวันที่เพิ่มพอดี */
+let streamerSort = { key: "streamer_name", dir: "asc" };
+function sortStreamers(list){
+  const sorted = [...list].sort((a, b) => {
+    const cmp = streamerSort.key === "streamer_name"
+      ? String(a.streamer_name || "").localeCompare(String(b.streamer_name || ""), "th")
+      : String(a.updated_at || "").localeCompare(String(b.updated_at || ""));
+    return streamerSort.dir === "asc" ? cmp : -cmp;
+  });
+  return sorted;
+}
+function setStreamerSort(key){
+  if (streamerSort.key === key) streamerSort.dir = streamerSort.dir === "asc" ? "desc" : "asc";
+  else { streamerSort.key = key; streamerSort.dir = key === "updated_at" ? "desc" : "asc"; }
+  render();
+}
+$("sortByName").addEventListener("click", () => setStreamerSort("streamer_name"));
+$("sortByDate").addEventListener("click", () => setStreamerSort("updated_at"));
 $("addStreamer").addEventListener("click", () => openForm(null));
 $("cancelStreamer").addEventListener("click", () => { $("streamerForm").style.display="none"; editingId=null; });
 
@@ -3019,6 +3052,66 @@ function renderResults(){
   }
 }
 
+/* ══════════ คลังสัญญา — จัดกลุ่มสัญญาที่สร้างสำเร็จแล้วตามโปรเจกต์ แล้วซอยเป็นรอบ (batch) ══════════
+   ต่างจาก "ผลการสร้างสัญญาล่าสุด" ที่หน้าแรก (จำกัด 12 แถวล่าสุด) — หน้านี้โชว์ครบทุกฉบับ แยกดูเป็นก้อนตามรอบ/โปรเจกต์ */
+function renderArchive(){
+  const box = $("archiveBox");
+  const rows = DB.sheet.tracker.filter(r => !blank(r.generated_at));
+  if (!rows.length){
+    box.innerHTML = `<div class="empty">ยังไม่มีสัญญาที่สร้างสำเร็จ</div>`;
+    return;
+  }
+
+  const groups = {};   // "โปรเจกต์||batch_id" -> { proj, bid, list }
+  rows.forEach(r => {
+    const proj = r.project || "(ไม่ระบุโปรเจกต์)";
+    const bid  = r.batch_id || "(ไม่มีรอบ)";
+    const key = proj + "||" + bid;
+    (groups[key] = groups[key] || { proj, bid, list: [] }).list.push(r);
+  });
+  Object.values(groups).forEach(g => g.list.sort((a,b) => String(b.generated_at).localeCompare(String(a.generated_at))));
+
+  const byProject = {};
+  Object.values(groups).forEach(g => (byProject[g.proj] = byProject[g.proj] || []).push(g));
+  const latestOf = list => Math.max(...list.map(r => Date.parse(r.generated_at) || 0));
+  const projects = Object.keys(byProject).sort((a,b) =>
+    latestOf(byProject[b].flatMap(g=>g.list)) - latestOf(byProject[a].flatMap(g=>g.list)));
+
+  let idx = 0;
+  const groupsByIdx = [];
+  box.innerHTML = projects.map(proj => {
+    const gs = byProject[proj].sort((a,b) => latestOf(b.list) - latestOf(a.list));
+    const total = gs.reduce((n,g) => n + g.list.length, 0);
+    return `<h3 style="margin:20px 0 10px">${esc(proj)} <span class="hint">· ${total} ฉบับ</span></h3>` +
+      gs.map(g => {
+        const myIdx = idx++; groupsByIdx.push(g);
+        const latestDate = fmtDMY((g.list[0].generated_at||"").slice(0,10)) || (g.list[0].generated_at||"").slice(0,10);
+        return `<details class="card fold" style="margin-bottom:10px">
+          <summary>${esc(g.bid)} <span class="hint">— ${g.list.length} ฉบับ · ล่าสุด ${esc(latestDate)}</span></summary>
+          <div class="foldbody"><div class="scroll"><table data-archidx="${myIdx}"></table></div></div>
+        </details>`;
+      }).join("");
+  }).join("");
+
+  box.querySelectorAll("table[data-archidx]").forEach(table => {
+    const g = groupsByIdx[+table.dataset.archidx];
+    if (!g) return;
+    tbl(table, [
+      { h:"Contract ID", cls:"mono", f:r=>esc(r.contract_id) },
+      { h:"สตรีมเมอร์", f:r=>esc(r.streamer_name || r.streamer_id) },
+      { h:"สถานะ", f:r=>{ const st = RES_STATE[up(r.status)] || { pill:"flat", label:r.status||"—" };
+          return `<span class="pill ${st.pill}">${esc(st.label)}</span>`; } },
+      { h:"สร้างเมื่อ", cls:"mono", f:r=>esc((r.generated_at||"").slice(0,16)) },
+      { h:"ไฟล์", cls:"wrap-cell", f:r=>{
+          const files = [[r.draft_file_url_contract_nda,"สัญญา"],[r.draft_file_url_mou,"MOU"],[r.signed_file_url,"ฉบับเซ็น"]]
+            .filter(([u]) => !blank(u));
+          return files.length ? files.map(([u,l]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join(" · ") : "—";
+        } },
+    ], g.list, "");
+    rowsOpenEdit(table, g.list, r => r.contract_id);
+  });
+}
+
 /** บอกงานชิ้นเดียวที่ควรทำต่อ เรียงตามความเร่งด่วนจริง */
 function renderNextUp(ctx){
   const go = p => `<button class="primary" data-goto="${p}" type="button">ไปที่นั่น</button>`;
@@ -3100,6 +3193,10 @@ function render(){
 
   /* ---- streamers ---- */
   const ts = $("tStreamers");
+  const sortedStreamers = sortStreamers(DB.streamers);
+  const arrow = dir => dir === "asc" ? "▲" : "▼";
+  $("sortByNameArrow").textContent = streamerSort.key === "streamer_name" ? arrow(streamerSort.dir) : "";
+  $("sortByDateArrow").textContent = streamerSort.key === "updated_at" ? arrow(streamerSort.dir) : "";
   tbl(ts, [
     { h:"", cls:"pickcell", f:s=>`<input type="checkbox" data-pick="${esc(s.streamer_id)}">` },
     { h:"ID", cls:"mono", f:s=>esc(s.streamer_id) },
@@ -3109,16 +3206,17 @@ function render(){
     { h:"ที่อยู่", f:s=>bilingual(s.address, s.address_th, '<span class="pill mid">ว่าง</span>') },
     { h:"สถานะ", f:s=> String(s.active_status).toLowerCase()==="active"
         ? '<span class="pill ok">Active</span>' : `<span class="pill flat">${esc(s.active_status||"—")}</span>` },
+    { h:"เพิ่ม/แก้ล่าสุด", cls:"mono", f:s=>esc(s.updated_at||"—") },
     { h:"", f:s=>`<button class="sm" data-edit="${esc(s.streamer_id)}" type="button">แก้</button>
                   <button class="sm danger" data-del="${esc(s.streamer_id)}" type="button">ลบ</button>` },
-  ], DB.streamers, "ยังไม่มีสตรีมเมอร์ — กด “+ เพิ่มสตรีมเมอร์” หรือ “นำเข้า CSV”");
+  ], sortedStreamers, "ยังไม่มีสตรีมเมอร์ — กด “+ เพิ่มสตรีมเมอร์” หรือ “นำเข้า CSV”");
   ts.querySelectorAll("[data-edit]").forEach(b=>b.addEventListener("click",()=>openForm(b.dataset.edit)));
   ts.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>bulkDeleteStreamers([b.dataset.del])));
 
   $("stBulk").style.display = DB.streamers.length ? "flex" : "none";
   if (DB.streamers.length){
     wireBulk({
-      root: ts, ids: DB.streamers.map(s=>s.streamer_id), picked: pickedStreamers,
+      root: ts, ids: sortedStreamers.map(s=>s.streamer_id), picked: pickedStreamers,
       allBox: $("stPickAll"), countEl: $("stPickCount"), delBtn: $("stPickDelete"), bulkEl: $("stBulk"),
       label: n => n ? `ลบที่เลือก (${n})` : "ลบที่เลือก",
       onDelete: bulkDeleteStreamers,
@@ -3350,6 +3448,7 @@ function render(){
   ].map(([n,c]) => `<span class="pill ${c?"ok":"flat"}">${esc(n)}${c?` · ${c}`:""}</span>`).join("");
 
   renderResults();
+  renderArchive();
   renderNextUp({ errors:errCount, failing:failing.length, exp7, requested:requested.length });
 
   fillProjects(); fillBundles(); syncGameField(); renderTplInfo();
