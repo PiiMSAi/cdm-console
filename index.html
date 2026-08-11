@@ -400,9 +400,11 @@
         <div class="row">
           <button id="impStreamers" type="button">นำเข้า CSV</button>
           <button id="expStreamers" type="button">ส่งออก CSV</button>
+          <button id="pushStreamers" type="button">ส่งขึ้นชีต</button>
           <button class="primary" id="addStreamer" type="button">+ เพิ่มสตรีมเมอร์</button>
         </div>
       </div>
+      <p class="hint" id="pushStreamersStatus" style="margin:-6px 0 12px"></p>
       <input type="file" id="fileStreamers" accept=".csv" style="display:none">
 
       <div id="streamerForm" style="display:none">
@@ -616,22 +618,8 @@
 
     <div class="card">
       <h2>เชื่อมต่อ Google Sheets</h2>
-      <p class="sub" style="margin:-6px 0 12px">ตั้งครั้งเดียว แล้วจะทั้งดึงข้อมูลมาตรวจ และส่งข้อมูลขึ้นได้จากที่นี่</p>
-      <ol style="padding-left:20px; font-size:13.5px; line-height:1.9; margin:0">
-        <li>เปิดชีต <code>CDM_Contract_Management</code> → <b>ส่วนขยาย → Apps Script</b></li>
-        <li>ลบโค้ดเดิม วางโค้ดจาก <code>apps-script/Code.gs</code></li>
-        <li>แก้ <code>SECRET</code> ในโค้ดเป็นข้อความลับของคุณ</li>
-        <li><b>การตั้งค่าโครงการ</b> → ติ๊ก <b>แสดงไฟล์ appsscript.json</b> → เปิดไฟล์นั้น
-            วางเนื้อหาจาก <code>apps-script/appsscript.json</code></li>
-        <li>เลือกฟังก์ชัน <code>authorize</code> → <b>เรียกใช้</b> → กดอนุญาตให้ครบ
-            <span class="hint">ต้องได้ <code>canWrite: true</code> ไม่งั้นปุ่มลบจะใช้ไม่ได้</span></li>
-        <li><b>ทำให้ใช้งานได้ → เว็บแอป</b> · ดำเนินการในชื่อ: <b>ฉัน</b> · สิทธิ์เข้าถึง: <b>ทุกคน</b></li>
-        <li>เอา URL กับข้อความลับมาใส่ข้างล่าง</li>
-      </ol>
-      <div class="callout warn" style="margin-top:12px"><b>ข้ามข้อ 4 ไม่ได้</b>
-        ถ้าไม่ประกาศสิทธิ์เอง Google จะเดาให้ แล้วมักได้สิทธิ์อ่านไดรฟ์อย่างเดียว
-        อาการคือใช้งานได้ปกติทุกอย่าง ยกเว้นลบไฟล์ไม่ได้สักไฟล์</div>
-      <div class="grid" style="margin-top:14px">
+      <p class="sub" style="margin:-6px 0 12px">จุดเชื่อมระหว่างคอนโซลกับชีตข้อมูล — ตั้งไว้ให้แล้ว ไม่ต้องแก้ เว้นแต่จะย้ายไปใช้ Apps Script ตัวใหม่</p>
+      <div class="grid">
         <div class="f"><label>Web App URL</label><input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
         <div class="f"><label>ข้อความลับ</label><input id="cfgSecret" type="password"></div>
       </div>
@@ -640,23 +628,13 @@
         <button id="testCfg" type="button">ทดสอบการเชื่อมต่อ</button>
         <span class="hint" id="cfgStatus"></span>
       </div>
-      <div class="callout bad"><b>ความเสี่ยงที่ต้องรู้</b>
-        การตั้ง “ทุกคน” ทำให้ URL นี้รับ request จากอินเทอร์เน็ตได้ ข้อความลับคือด่านกันอย่างเดียว
-        และตอนนี้ URL นี้ <b>อ่านข้อมูลสัญญาออกไปได้ด้วย</b> ไม่ใช่แค่เขียนเข้า
-        ตั้งให้ยาว อย่าแชร์ ถ้าหลุดให้ deploy ใหม่เพื่อเปลี่ยน URL</div>
     </div>
 
     <div class="card">
       <h2>สั่ง n8n ทำงานจากคอนโซล</h2>
       <p class="sub" style="margin:-6px 0 12px">ตั้งแล้วจะมีปุ่ม “สั่งสร้างเอกสารเดี๋ยวนี้” ที่หน้าภาพรวม ไม่ต้องเปิด n8n เอง
-        <b>ตั้งครั้งเดียวจากเครื่องไหนก็ได้ ทุกเครื่องที่กด “ดึงข้อมูลจากชีต” จะเห็นค่าเดียวกันทันที</b> ไม่ต้องมาตั้งซ้ำ</p>
-      <ol style="padding-left:20px; font-size:13.5px; line-height:1.9; margin:0">
-        <li>เปิด WF-01 ใน n8n → โหนด <b>Run From Console</b> (Webhook) → คัดลอก <b>Production URL</b></li>
-        <li>ในโหนดเดียวกัน ตั้ง <b>Authentication = Header Auth</b> แล้วสร้าง credential
-            ชื่อหัวข้อ <code>x-cdm-token</code> ค่าเป็นข้อความลับที่ตั้งเอง</li>
-        <li>เอา URL กับข้อความลับนั้นมาใส่ข้างล่าง แล้ว <b>Activate</b> workflow</li>
-      </ol>
-      <div class="grid" style="margin-top:14px">
+        ตั้งครั้งเดียวจากเครื่องไหนก็ได้ ทุกเครื่องเห็นค่าเดียวกันทันที</p>
+      <div class="grid">
         <div class="f"><label>Webhook URL</label><input id="cfgHook" placeholder="https://.../webhook/cdm-run"></div>
         <div class="f"><label>ข้อความลับของ Webhook</label><input id="cfgHookToken" type="password"></div>
       </div>
@@ -664,9 +642,6 @@
         <button class="primary" id="saveHook" type="button">บันทึก</button>
         <span class="hint" id="hookStatus"></span>
       </div>
-      <div class="callout warn"><b>ใครรู้ URL นี้ก็สั่งรันได้</b>
-        ข้อความลับใน header คือด่านกันอย่างเดียว — ต้องตั้ง Header Auth ในโหนด Webhook ให้เรียบร้อย
-        ไม่งั้นใครก็สั่งสร้างเอกสารจากข้อมูลในชีตของคุณได้</div>
     </div>
 
     <details class="card fold">
@@ -1444,6 +1419,27 @@ $("fileStreamers").addEventListener("change", e => {
 $("expStreamers").addEventListener("click", () => {
   download("Streamer_Master.csv",
     [STREAMER_COLS.join(",")].concat(DB.streamers.map(s=>STREAMER_COLS.map(k=>csvCell(s[k])).join(","))).join("\n"));
+});
+
+/* นำเข้า CSV/เพิ่มทีละคนแค่บันทึกในเครื่อง — สตรีมเมอร์จะขึ้นชีตจริงก็ต่อเมื่อมีคนสร้างสัญญาให้เขา
+   (ตอนนั้น pushPending() จะพ่วง DB.streamers ทั้งก้อนไปด้วย) ปุ่มนี้เอาไว้กดส่งเองตรง ๆ
+   เวลานำเข้าทีละหลายร้อยคนแล้วอยากให้เครื่องอื่นเห็นทันที ไม่ต้องรอสร้างสัญญาให้ครบทุกคนก่อน */
+$("pushStreamers").addEventListener("click", async () => {
+  if (!cfgReady()){ toast("ยังไม่ได้ตั้งค่า Apps Script ที่แท็บ “ตั้งค่า”","bad"); return; }
+  if (!DB.streamers.length){ toast("ยังไม่มีสตรีมเมอร์ในเครื่องนี้"); return; }
+  const say = t => { $("pushStreamersStatus").textContent = t; };
+  say("กำลังส่ง...");
+  try{
+    const out = await callScript({ action:"write", contracts:[], streamers:DB.streamers,
+      contractCols:TRACKER_COLS, streamerCols:STREAMER_COLS });
+    if (!out.ok) throw new Error(out.error || "ไม่ทราบสาเหตุ");
+    // skippedStreamers ตรงนี้ปกติมาก — คือคนที่เคยส่งไปแล้วก่อนหน้า ไม่ใช่ error
+    say(`ส่งแล้ว — เพิ่มใหม่ ${out.streamersAdded} คน (คนที่มีอยู่แล้วในชีตถูกข้ามให้เอง ไม่ซ้ำ)`);
+    pullFromSheet(true);
+  } catch(err){
+    say("ส่งไม่สำเร็จ: " + err.message);
+    toast("ส่งขึ้นชีตไม่สำเร็จ: " + err.message, "bad");
+  }
 });
 
 /* ══════════ batch ══════════ */
