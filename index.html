@@ -3195,8 +3195,11 @@ function renderArchive(){
             .filter(([u]) => !blank(u));
           return files.length ? files.map(([u,l]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join(" · ") : "—";
         } },
+      { h:"", f:r=>`<button class="sm icon danger" data-delarch="${esc(r.contract_id)}" type="button" title="ลบ" aria-label="ลบ">🗑️</button>` },
     ], g.list, "");
     rowsOpenEdit(table, g.list, r => r.contract_id);
+    table.querySelectorAll("[data-delarch]").forEach(b =>
+      b.addEventListener("click", () => deleteContract(b.dataset.delarch)));
   });
 }
 
