@@ -1921,8 +1921,9 @@ function buildRows(members){
   });
 }
 /** สร้างแถวสัญญาต่ออายุจากสัญญาเดิมที่ใกล้หมด — คัดลอกเงื่อนไข (ค่าจ้าง/ชุดเอกสาร/เกม) มาจากของเดิมทั้งหมด
-    เริ่มวันถัดจากวันหมดอายุเดิม 1 วัน และตั้งข้อ 12 ให้อ้างสัญญาเดิมอัตโนมัติ (เทมเพลตที่ไม่มีข้อ 12 จะไม่ใช้ค่านี้เอง) */
-function buildRenewalRow(oldRow, months){
+    เริ่มวันถัดจากวันหมดอายุเดิม 1 วัน และตั้งข้อ 12 ให้อ้างสัญญาเดิมอัตโนมัติ (เทมเพลตที่ไม่มีข้อ 12 จะไม่ใช้ค่านี้เอง)
+    contractDate แก้ได้เอง (ค่าตั้งต้น = วันนี้) เผื่อสัญญาทำจริงคนละวันกับวันที่กดในคอนโซล */
+function buildRenewalRow(oldRow, months, contractDate){
   const start = addDaysISO(oldRow.contract_end, 1);
   const end = addMonthsISO(start, months);
   const ym = start.slice(0, 7).replace("-", "");
@@ -1931,13 +1932,14 @@ function buildRenewalRow(oldRow, months){
   let n = 0, cid;
   do { n++; cid = prefix + String(n).padStart(3, "0"); } while (taken.has(cid));
   const now = todayISO();
+  const cdate = DATE_RE.test(contractDate || "") ? contractDate : now;
   const o = {}; TRACKER_COLS.forEach(k => o[k] = "");
   Object.assign(o, {
     contract_id: cid, batch_id: `BATCH-${slug(oldRow.project)}-${ym}`,
     streamer_id: oldRow.streamer_id, streamer_name: oldRow.streamer_name,
     project: oldRow.project, game_name: oldRow.game_name,
     contract_type_bundle: oldRow.contract_type_bundle, template_version: "v1",
-    contract_date: now, contract_start: start, contract_end: end,
+    contract_date: cdate, contract_start: start, contract_end: end,
     fee: oldRow.fee, currency: oldRow.currency, wallet_points: oldRow.wallet_points,
     previous_contract_date: oldRow.contract_date,
     clips_per_month: oldRow.clips_per_month,
@@ -2099,7 +2101,8 @@ $("renewGo").addEventListener("click", async () => {
     const s = findStreamer(old.streamer_id);
     const chk = checkStreamer(s);
     if (chk.errors.length){ problems.push(`${old.streamer_name || old.streamer_id}: ${chk.errors.join(", ")}`); return; }
-    built.push(buildRenewalRow(old, renewSel[old.contract_id]));
+    const sel = renewSel[old.contract_id];
+    built.push(buildRenewalRow(old, sel.months, sel.contractDate));
   });
 
   if (problems.length && !await ask({
@@ -2112,7 +2115,7 @@ $("renewGo").addEventListener("click", async () => {
   const ok = await ask({
     title: "ต่ออายุสัญญา", yes: `ต่ออายุ ${built.length} สัญญา`,
     html: `<b>${built.length} สัญญา</b>` +
-      askList(built.map(r => `${r.streamer_name} — ${fmtDMY(r.contract_start)} ถึง ${fmtDMY(r.contract_end)}`)) +
+      askList(built.map(r => `${r.streamer_name} — วันที่ทำสัญญา ${fmtDMY(r.contract_date)} · ${fmtDMY(r.contract_start)} ถึง ${fmtDMY(r.contract_end)}`)) +
       `<div class="note">เลขสัญญาที่ส่งขึ้นชีตแล้ว เอากลับมาใช้ซ้ำไม่ได้</div>`,
   });
   if (!ok) return;
@@ -3298,7 +3301,6 @@ function render(){
     { h:"ชื่อในวงการ", f:s=>esc(s.streamer_name) },
     { h:"ชื่อตามกฎหมาย", f:s=>bilingual(s.legal_name, s.legal_name_th, '<span class="pill no">ขาด</span>') },
     { h:"อีเมล", f:s=> s.email ? (EMAIL_RE.test(s.email)?esc(s.email):`<span class="pill no">${esc(s.email)}</span>`) : '<span class="pill no">ขาด</span>' },
-    { h:"ที่อยู่", f:s=>bilingual(s.address, s.address_th, '<span class="pill mid">ว่าง</span>') },
     { h:"สถานะ", f:s=> String(s.active_status).toLowerCase()==="active"
         ? '<span class="pill ok">Active</span>' : `<span class="pill flat">${esc(s.active_status||"—")}</span>` },
     { h:"เพิ่ม/แก้ล่าสุด", cls:"mono", f:s=>esc(s.updated_at||"—") },
@@ -3375,8 +3377,11 @@ function render(){
     { h:"ระดับ", f:x=> x.d<0 ? '<span class="pill no">✕ หมดอายุแล้ว</span>'
         : x.d<=7 ? '<span class="pill action">⚠ เตือน 7 วัน</span>'
         : x.d<=14 ? '<span class="pill action">⚠ เตือน 14 วัน</span>' : '<span class="pill action">⚠ เตือน 30 วัน</span>' },
-    { h:"ต่อกี่เดือน", f:x=>`<input type="number" min="1" max="36" style="width:64px" data-renewmonths="${esc(x.r.contract_id)}"
-        value="${renewSel[x.r.contract_id] ?? monthsOf(x.r.contract_start, x.r.contract_end)}" ${renewSel[x.r.contract_id]?"":"disabled"}>` },
+    { h:"ต่อกี่เดือน", f:x=>`<input type="number" min="1" max="36" style="width:60px" data-renewmonths="${esc(x.r.contract_id)}"
+        value="${renewSel[x.r.contract_id]?.months ?? monthsOf(x.r.contract_start, x.r.contract_end)}" ${renewSel[x.r.contract_id]?"":"disabled"}>` },
+    // วันที่ทำสัญญาฉบับใหม่ — ตั้งต้นเป็นวันนี้ แต่แก้ได้ เผื่อทำสัญญาจริงคนละวันกับวันที่กดในคอนโซล
+    { h:"วันที่ทำสัญญาใหม่", f:x=>`<input type="date" style="width:135px" data-renewdate="${esc(x.r.contract_id)}"
+        value="${renewSel[x.r.contract_id]?.contractDate ?? todayISO()}" ${renewSel[x.r.contract_id]?"":"disabled"}>` },
   ], expiring, "ไม่มีสัญญาใกล้หมดอายุใน 30 วัน");
   $("tExpiry").querySelectorAll("[data-editexp]").forEach(b =>
     b.addEventListener("click", () => openEdit(b.dataset.editexp)));
@@ -3385,16 +3390,22 @@ function render(){
       const cid = cb.dataset.renew;
       if (cb.checked){
         const row = expiring.find(x=>x.r.contract_id===cid)?.r;
-        if (row) renewSel[cid] = renewSel[cid] || monthsOf(row.contract_start, row.contract_end);
+        if (row) renewSel[cid] = renewSel[cid] || { months: monthsOf(row.contract_start, row.contract_end), contractDate: todayISO() };
       } else delete renewSel[cid];
       render();
     }));
-  // พิมพ์จำนวนเดือน = อัปเดตแค่ state ไม่วาดตารางใหม่ ไม่งั้นโฟกัส/เคอร์เซอร์จะหลุดกลางคัน
+  // พิมพ์จำนวนเดือน/วันที่ = อัปเดตแค่ state ไม่วาดตารางใหม่ ไม่งั้นโฟกัส/เคอร์เซอร์จะหลุดกลางคัน
   $("tExpiry").querySelectorAll("[data-renewmonths]").forEach(inp =>
     inp.addEventListener("input", () => {
       const cid = inp.dataset.renewmonths;
       if (!(cid in renewSel)) return;
-      renewSel[cid] = Math.max(1, Math.min(36, parseInt(inp.value,10) || 1));
+      renewSel[cid].months = Math.max(1, Math.min(36, parseInt(inp.value,10) || 1));
+    }));
+  $("tExpiry").querySelectorAll("[data-renewdate]").forEach(inp =>
+    inp.addEventListener("input", () => {
+      const cid = inp.dataset.renewdate;
+      if (!(cid in renewSel)) return;
+      renewSel[cid].contractDate = DATE_RE.test(inp.value) ? inp.value : todayISO();
     }));
   const nRenew = Object.keys(renewSel).length;
   $("renewBar").style.display = nRenew ? "flex" : "none";
