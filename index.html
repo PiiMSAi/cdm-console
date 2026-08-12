@@ -2270,6 +2270,8 @@ async function requestRegen(contractId, msgEl){
    แต่ต้องกรอง id ที่หายไปจากข้อมูลแล้วออกทุกครั้ง ไม่งั้นตัวนับค้างเกินจำนวนจริง */
 const pickedContracts = new Set();
 const pickedStreamers = new Set();
+// คลังสัญญาแยกทีละรอบ (batch) จึงต้องมีเซ็ตที่เลือกไว้แยกต่อรอบ ไม่ปนกัน
+const pickedArchiveBatches = new Map();
 
 function wireBulk(cfg){
   cfg.picked.forEach(id => { if (!cfg.ids.includes(id)) cfg.picked.delete(id); });
@@ -3174,9 +3176,15 @@ function renderArchive(){
       gs.map(g => {
         const myIdx = idx++; groupsByIdx.push(g);
         const latestDate = fmtDMY((g.list[0].generated_at||"").slice(0,10)) || (g.list[0].generated_at||"").slice(0,10);
+        const bulkBar = cfgReady() ? `<div class="bulk" data-archbulk="${myIdx}" style="display:none">
+            <label><input type="checkbox" data-archpickall="${myIdx}">เลือกทั้งหมด</label>
+            <span class="count" data-archcount="${myIdx}"></span>
+            <button class="sm danger" data-archpickdel="${myIdx}" type="button" disabled>ลบที่เลือก</button>
+            <button class="sm danger" data-archdelbatch="${myIdx}" type="button" style="margin-left:auto">ลบทั้งรอบนี้ (${g.list.length} ฉบับ)</button>
+          </div>` : "";
         return `<details class="card fold" style="margin-bottom:10px">
           <summary>${esc(g.bid)} <span class="hint">— ${g.list.length} ฉบับ · ล่าสุด ${esc(latestDate)}</span></summary>
-          <div class="foldbody"><div class="scroll"><table data-archidx="${myIdx}"></table></div></div>
+          <div class="foldbody">${bulkBar}<div class="scroll"><table data-archidx="${myIdx}"></table></div></div>
         </details>`;
       }).join("");
   }).join("");
@@ -3184,7 +3192,13 @@ function renderArchive(){
   box.querySelectorAll("table[data-archidx]").forEach(table => {
     const g = groupsByIdx[+table.dataset.archidx];
     if (!g) return;
+    const myIdx = table.dataset.archidx;
     tbl(table, [
+      ...(cfgReady() ? [
+        { h:"", cls:"pickcell", f:r=>`<input type="checkbox" data-pick="${esc(r.contract_id)}">` },
+        { h:"", f:r=>`<button class="sm icon" data-editarch="${esc(r.contract_id)}" type="button" title="แก้ไข" aria-label="แก้ไข">✏️</button>
+                      <button class="sm icon danger" data-delarch="${esc(r.contract_id)}" type="button" title="ลบ" aria-label="ลบ">🗑️</button>` },
+      ] : []),
       { h:"Contract ID", cls:"mono", f:r=>esc(r.contract_id) },
       { h:"สตรีมเมอร์", f:r=>esc(r.streamer_name || r.streamer_id) },
       { h:"สถานะ", f:r=>{ const st = RES_STATE[up(r.status)] || { pill:"flat", label:r.status||"—" };
@@ -3195,11 +3209,31 @@ function renderArchive(){
             .filter(([u]) => !blank(u));
           return files.length ? files.map(([u,l]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join(" · ") : "—";
         } },
-      { h:"", f:r=>`<button class="sm icon danger" data-delarch="${esc(r.contract_id)}" type="button" title="ลบ" aria-label="ลบ">🗑️</button>` },
     ], g.list, "");
     rowsOpenEdit(table, g.list, r => r.contract_id);
+    table.querySelectorAll("[data-editarch]").forEach(b =>
+      b.addEventListener("click", () => openEdit(b.dataset.editarch)));
     table.querySelectorAll("[data-delarch]").forEach(b =>
       b.addEventListener("click", () => deleteContract(b.dataset.delarch)));
+
+    if (!cfgReady()) return;
+    const bulkEl = box.querySelector(`[data-archbulk="${myIdx}"]`);
+    if (!bulkEl) return;
+    bulkEl.style.display = "flex";
+    const key = g.proj + "||" + g.bid;
+    let picked = pickedArchiveBatches.get(key);
+    if (!picked){ picked = new Set(); pickedArchiveBatches.set(key, picked); }
+    wireBulk({
+      root: table, ids: g.list.map(r => r.contract_id), picked,
+      allBox: bulkEl.querySelector(`[data-archpickall="${myIdx}"]`),
+      countEl: bulkEl.querySelector(`[data-archcount="${myIdx}"]`),
+      delBtn: bulkEl.querySelector(`[data-archpickdel="${myIdx}"]`),
+      bulkEl,
+      onDelete: bulkDeleteContracts,
+      label: n => n ? `ลบที่เลือก (${n})` : "ลบที่เลือก",
+    });
+    bulkEl.querySelector(`[data-archdelbatch="${myIdx}"]`).addEventListener("click",
+      () => bulkDeleteContracts(g.list.map(r => r.contract_id)));
   });
 }
 
