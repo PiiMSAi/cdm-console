@@ -660,7 +660,7 @@
     <div class="card">
       <h2>รหัสผ่านเข้าคอนโซล</h2>
       <p class="sub" style="margin:-6px 0 12px">กันคนเดินผ่านมาเปิดลิงก์เฉย ๆ — <b>ไม่ใช่ระบบความปลอดภัยจริง</b>
-        ตัวกันข้อมูลจริงคือข้อความลับของ Apps Script ด้านล่าง</p>
+        ตัวกันข้อมูลจริงคือ Cloudflare Worker ที่คั่นกลางอยู่ก่อนถึง Apps Script (ดูหัวข้อ “เชื่อมต่อ Google Sheets” ด้านล่าง)</p>
       <div class="grid">
         <div class="f"><label>ID</label><input id="gwId" placeholder="เช่น cdm"></div>
         <div class="f"><label>ตั้งรหัสผ่านใหม่</label><input id="gwNew" type="password"></div>
@@ -687,10 +687,10 @@
 
     <div class="card">
       <h2>เชื่อมต่อ Google Sheets</h2>
-      <p class="sub" style="margin:-6px 0 12px">จุดเชื่อมระหว่างคอนโซลกับชีตข้อมูล — ตั้งไว้ให้แล้ว ไม่ต้องแก้ เว้นแต่จะย้ายไปใช้ Apps Script ตัวใหม่</p>
+      <p class="sub" style="margin:-6px 0 12px">จุดเชื่อมระหว่างคอนโซลกับชีตข้อมูล — ตั้งไว้ให้แล้ว ไม่ต้องแก้ เว้นแต่จะย้ายไปใช้ตัวกลางเครื่องใหม่
+        (คำขอทุกอย่างส่งผ่าน Cloudflare Worker ก่อนถึง Apps Script — ตัวกลางนี้เป็นคนถือรหัสลับจริงแทน ไฟล์คอนโซลจึงไม่มีรหัสลับให้ตั้งเองอีกแล้ว)</p>
       <div class="grid">
-        <div class="f"><label>Web App URL</label><input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
-        <div class="f"><label>ข้อความลับ</label><input id="cfgSecret" type="password"></div>
+        <div class="f"><label>URL เชื่อมต่อ</label><input id="cfgUrl" placeholder="https://....workers.dev"></div>
       </div>
       <div class="row" style="margin-top:12px">
         <button class="primary" id="saveCfg" type="button">บันทึก</button>
@@ -2731,11 +2731,11 @@ $("gwLogout").addEventListener("click", () => {
 });
 
 $("saveCfg").addEventListener("click", () => {
-  DB.cfg.url = $("cfgUrl").value.trim(); DB.cfg.secret = $("cfgSecret").value; save();
+  DB.cfg.url = $("cfgUrl").value.trim(); DB.cfg.secret = DEFAULT_CFG.secret; save();
   $("cfgStatus").textContent = "บันทึกแล้ว"; setTimeout(()=>$("cfgStatus").textContent="",1800);
 });
 $("testCfg").addEventListener("click", async () => {
-  DB.cfg.url = $("cfgUrl").value.trim(); DB.cfg.secret = $("cfgSecret").value;
+  DB.cfg.url = $("cfgUrl").value.trim(); DB.cfg.secret = DEFAULT_CFG.secret;
   $("cfgStatus").textContent = "กำลังทดสอบ...";
   try{
     const out = await callScript({ ping:true });
@@ -3606,7 +3606,6 @@ function render(){
 
   /* ---- misc ---- */
   $("cfgUrl").value = DB.cfg.url || "";
-  $("cfgSecret").value = DB.cfg.secret || "";
   $("cfgHook").value = DB.cfg.hook || "";
   $("cfgHookToken").value = DB.cfg.hookToken || "";
   // ปุ่มสั่งงานโผล่เฉพาะเมื่อตั้ง webhook แล้ว ไม่งั้นกดไปก็พังอย่างเดียว
