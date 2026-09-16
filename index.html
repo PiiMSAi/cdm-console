@@ -895,6 +895,9 @@ async function tryUnlock(id, pw){
     localStorage.setItem(GATE_KEY, "1");
     setLocked(false);
     pwEl.value = ""; errEl.textContent = "";
+    // เพิ่งปลดล็อกสำเร็จ — ดึงข้อมูลจริงตอนนี้แหละ (ห้ามดึงไว้ตั้งแต่ก่อนปลดล็อก ไม่งั้นข้อมูลจะไปนอนรออยู่ใน DOM
+    // ตั้งแต่ยังไม่ผ่านด่าน แค่สั่ง unhide .wrap ผ่าน DevTools ก็เห็นได้เลยโดยไม่ต้องรู้รหัสผ่านจริง)
+    if (DB.cfg.autoPull || (cfgReady() && !DB.sheet.fetchedAt)) pullIfStale(0);
   } else {
     errEl.textContent = "ID หรือรหัสผ่านไม่ถูกต้อง";
   }
@@ -3638,7 +3641,12 @@ syncAuto();   // เปิดตัวจับเวลาอัปเดตอ
 // เบราว์เซอร์/โดเมนที่เพิ่งเปิดเป็นครั้งแรก (เช่น public link ที่เพิ่งแจกให้ทีม) localStorage ว่างเปล่า
 // ต่อให้ DEFAULT_CFG เติม url/secret มาให้พร้อมใช้แล้ว ก็ยังต้องดึงเองครั้งแรกอยู่ดีถ้ารอ autoPull ที่ยังไม่เคยติ๊ก
 // เลยดึงทันทีเมื่อพร้อมยิง request ได้ (cfgReady) แต่ยังไม่เคยดึงบนเครื่อง/โดเมนนี้เลย (fetchedAt ว่าง)
-if (DB.cfg.autoPull || (cfgReady() && !DB.sheet.fetchedAt)) pullIfStale(0);
+//
+// ต้องเช็ค !gateNeeded() ก่อนเสมอ — ถ้ายังไม่ปลดล็อก ห้ามดึงข้อมูลจริงมาไว้ใน DOM เด็ดขาด เพราะเกตหน้า
+// login เป็นแค่ CSS ซ่อน .wrap เท่านั้น ไม่ได้บล็อกอะไรจริง ถ้าดึงมาก่อน คนที่ไม่รู้รหัสผ่านเลยก็เห็นข้อมูลได้
+// แค่เปิด DevTools สั่ง unhide (กรณีปลดล็อกไว้แล้วจากรอบก่อนบนเครื่องนี้ gateNeeded() จะเป็น false ดึงได้ตามปกติ
+// ส่วนกรณียังไม่เคยปลดล็อก การดึงจะไปเกิดขึ้นตอน tryUnlock() สำเร็จแทน)
+if (!gateNeeded() && (DB.cfg.autoPull || (cfgReady() && !DB.sheet.fetchedAt))) pullIfStale(0);
 </script>
 </body>
 </html>
