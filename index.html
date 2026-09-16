@@ -159,6 +159,9 @@
   .pill.no{color:var(--critical-ink); background:color-mix(in srgb,var(--critical) 14%,transparent); border-color:color-mix(in srgb,var(--critical) 40%,transparent)}
   .pill.mid{color:var(--warning-ink); background:color-mix(in srgb,var(--warning) 18%,transparent); border-color:color-mix(in srgb,var(--warning) 45%,transparent)}
   .pill.flat{color:var(--ink-2); background:var(--plane); border-color:var(--ring)}
+  /* สีแท็กโปรเจกต์ไม่ตายตัว คำนวณจาก hue ที่ hash มาจากชื่อโปรเจกต์ (ดู tagHue()) ชื่อเดียวกันได้สีเดิมเสมอ
+     ผสมกับ --card/--ink ผ่าน color-mix แทนใช้ hsl ตรง ๆ จะได้ปรับตามธีมสว่าง/มืดอัตโนมัติ ไม่ต้องเขียนซ้ำสองชุด */
+  .pill.tag{color:color-mix(in srgb, hsl(var(--h) 65% 40%) 80%, var(--ink) 20%); background:color-mix(in srgb, hsl(var(--h) 65% 40%) 16%, var(--card)); border-color:color-mix(in srgb, hsl(var(--h) 65% 40%) 45%, transparent)}
   /* สีส้ม เฉพาะเรื่องที่ต้อง Take Action จริง ๆ (เช่น สัญญาใกล้หมดอายุ) แยกจาก .mid (เหลือง=สังเกต) ให้เด่นกว่า */
   .pill.action{color:var(--serious-ink); background:color-mix(in srgb,var(--serious) 20%,transparent); border-color:color-mix(in srgb,var(--serious) 50%,transparent); font-weight:700}
   .card.action{border-left:3px solid var(--serious)}
@@ -488,6 +491,9 @@
         </div>
       </div>
       <p class="hint" id="pushStreamersStatus" style="margin:-6px 0 12px"></p>
+      <div class="pkbar">
+        <input type="search" id="stFind" placeholder="ค้นหาชื่อ, ID, อีเมล, โปรเจกต์..." autocomplete="off">
+      </div>
       <div class="row" style="margin-bottom:12px">
         <span class="hint">เรียงตาม</span>
         <button class="sm" id="sortByName" type="button">ชื่อ <span id="sortByNameArrow"></span></button>
@@ -520,7 +526,7 @@
         <div class="f"><label>วันเริ่มสัญญา <span class="req">*</span></label><span class="dt"><input class="dtxt" data-for="b_start" inputmode="numeric" placeholder="วว/ดด/ปปปป" autocomplete="off"><span class="dcal" title="เลือกจากปฏิทิน">📅<input type="date" id="b_start"></span></span></div>
         <div class="f"><label>วันจบสัญญา <span class="req">*</span></label><span class="dt"><input class="dtxt" data-for="b_end" inputmode="numeric" placeholder="วว/ดด/ปปปป" autocomplete="off"><span class="dcal" title="เลือกจากปฏิทิน">📅<input type="date" id="b_end"></span></span></div>
         <div class="f"><label>สกุลเงิน <span class="req">*</span></label><select id="b_currency">
-          <option>PHP</option><option>THB</option><option>USD</option></select></div>
+          <option>PHP</option><option selected>THB</option><option>USD</option></select></div>
         <div class="f" id="gameField" style="display:none"><label>เกม <span class="req">*</span></label>
           <select id="b_game"></select></div>
       </div>
@@ -1352,6 +1358,20 @@ $("themeBtn").addEventListener("click", () => {
 /* ══════════ streamers CRUD ══════════ */
 let editingId = null;
 /* updated_at คือ "แก้ล่าสุด" ไม่ใช่ "สร้างเมื่อ" จริง ๆ (สคีมาไม่มีคอลัมน์แยก) แต่สำหรับคนที่เพิ่งนำเข้า/เพิ่มมาแล้วยังไม่มีใครแตะ ก็เท่ากับวันที่เพิ่มพอดี */
+/** สีของแท็กโปรเจกต์ — hash ชื่อเป็น hue คงที่ ชื่อเดียวกันได้สีเดิมเสมอ ไม่ต้องมาคอยกำหนดเอง */
+function tagHue(text){
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) % 360;
+  return h;
+}
+/** ค้นหารายชื่อสตรีมเมอร์ — ช่องเดียวค้นได้ทั้งชื่อ, ID, อีเมล, โปรเจกต์ */
+function filterStreamers(list){
+  const q = ($("stFind")?.value || "").trim().toLowerCase();
+  if (!q) return list;
+  return list.filter(s => [s.streamer_name, s.streamer_id, s.legal_name, s.legal_name_th, s.email, s.project]
+    .some(v => String(v || "").toLowerCase().includes(q)));
+}
+
 let streamerSort = { key: "streamer_name", dir: "asc" };
 function sortStreamers(list){
   const sorted = [...list].sort((a, b) => {
@@ -1370,6 +1390,7 @@ function setStreamerSort(key){
 }
 $("sortByName").addEventListener("click", () => setStreamerSort("streamer_name"));
 $("sortByDate").addEventListener("click", () => setStreamerSort("updated_at"));
+$("stFind").addEventListener("input", () => { streamerPage = 1; render(); });
 
 /* แบ่งหน้ารายชื่อสตรีมเมอร์ หน้าละ 50 คน กันตารางยาวจนต้อง scroll ไม่รู้จบ */
 const STREAMERS_PER_PAGE = 50;
@@ -3318,7 +3339,7 @@ function render(){
 
   /* ---- streamers ---- */
   const ts = $("tStreamers");
-  const sortedStreamers = sortStreamers(DB.streamers);
+  const sortedStreamers = sortStreamers(filterStreamers(DB.streamers));
   const arrow = dir => dir === "asc" ? "▲" : "▼";
   $("sortByNameArrow").textContent = streamerSort.key === "streamer_name" ? arrow(streamerSort.dir) : "";
   $("sortByDateArrow").textContent = streamerSort.key === "updated_at" ? arrow(streamerSort.dir) : "";
@@ -3336,6 +3357,12 @@ function render(){
                   <button class="sm icon danger" data-del="${esc(s.streamer_id)}" type="button" title="ลบ" aria-label="ลบ">🗑️</button>` },
     { h:"ID", cls:"mono", f:s=>esc(s.streamer_id) },
     { h:"ชื่อในวงการ", f:s=>esc(s.streamer_name) },
+    { h:"โปรเจกต์", f:s=>{
+        const projs = String(s.project||"").split(",").map(x=>x.trim()).filter(Boolean);
+        return projs.length
+          ? projs.map(p=>`<span class="pill tag" style="--h:${tagHue(p)}">${esc(p)}</span>`).join(" ")
+          : '<span class="hint">—</span>';
+      } },
     { h:"ชื่อตามกฎหมาย", f:s=>bilingual(s.legal_name, s.legal_name_th, '<span class="pill no">ขาด</span>') },
     { h:"อีเมล", f:s=> s.email ? (EMAIL_RE.test(s.email)?esc(s.email):`<span class="pill no">${esc(s.email)}</span>`) : '<span class="pill no">ขาด</span>' },
     { h:"สถานะ", f:s=> String(s.active_status).toLowerCase()==="active"
