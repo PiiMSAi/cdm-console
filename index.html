@@ -877,6 +877,13 @@ const gateCombine = (id, pw) => String(id || "").trim().toLowerCase() + "|" + St
 function gateNeeded(){ return GATE_HASH !== GATE_UNSET && localStorage.getItem(GATE_KEY) !== "1"; }
 function setLocked(on){ document.body.classList.toggle("locked", on); }
 setLocked(gateNeeded());
+// ป้องกันชั้นที่สอง: ถ้ายังไม่ปลดล็อก ห้ามให้ข้อมูลจริงที่เคยแคชไว้ในเครื่องนี้จาก session ก่อนหน้า
+// ไปโผล่ใน DOM เด็ดขาด (ปกติกด "ออกจากระบบเครื่องนี้" จะล้างข้อมูลไปแล้ว แต่เผื่อกรณีอื่นที่ทำให้
+// ล็อกอยู่ทั้งที่มีข้อมูลค้าง — render() ที่รันตอนเปิดหน้าจะได้ไม่มีอะไรให้แสดงจริง ๆ)
+if (gateNeeded()){
+  DB.streamers = []; DB.pending = []; DB.usedIds = [];
+  DB.sheet = Object.assign({}, DEF.sheet);
+}
 
 async function tryUnlock(id, pw){
   // ใช้ document.getElementById ตรง ๆ ในบล็อกนี้ — ตัวช่วย $() ยังไม่ถูกประกาศ ณ จุดนี้ของสคริปต์
@@ -2730,6 +2737,9 @@ $("gwMake").addEventListener("click", async () => {
 $("gwCopy").addEventListener("click", e => copyText($("gwHash").value, e.target));
 $("gwLogout").addEventListener("click", () => {
   localStorage.removeItem(GATE_KEY);
+  // ล้างข้อมูลที่แคชไว้ในเครื่องนี้ด้วย ไม่ใช่แค่สถานะล็อก — ไม่งั้นข้อมูลจริงยังค้างอยู่ใน localStorage
+  // เปิดหน้าใหม่มาเจอหน้าล็อกก็จริง แต่ข้อมูลเก่ายังไปโผล่ผ่านการ unhide DOM ได้อยู่ดี
+  localStorage.removeItem(KEY);
   toast("ออกจากระบบเครื่องนี้แล้ว — โหลดหน้าใหม่จะต้องกรอกรหัสผ่านอีกครั้ง (ถ้าตั้งรหัสไว้)", "ok");
 });
 
