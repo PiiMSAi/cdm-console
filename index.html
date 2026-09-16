@@ -3117,15 +3117,21 @@ const RES_STATE = {
 };
 
 function renderResults(){
-  const rows = DB.sheet.tracker.filter(r =>
+  // เก็บลำดับเดิมในชีตไว้ก่อนกรอง/เรียง — ใช้เป็นตัวตัดสินสำรองตอน generated_at/updated_at เท่ากัน
+  // (คอลัมน์ในชีตฟอร์แมตเป็น "วันที่" ล้วน ไม่มีเวลา ถ้าสร้างหลายฉบับวันเดียวกันจะเทียบเวลาไม่ได้เลย
+  // แถวใหม่จะถูกเติมท้ายชีตเสมอ ลำดับเดิมจึงบอกว่าใครใหม่กว่าได้แม่นกว่าตัวเวลาที่ไม่ละเอียดพอ)
+  const withIdx = DB.sheet.tracker.map((r, i) => ({ r, i }));
+  const rows = withIdx.filter(({r}) =>
     !blank(r.generated_at) || ["GENERATED","ERROR","GENERATING"].includes(up(r.status)));
 
-  // เรียงให้ที่ต้องแก้ขึ้นก่อน แล้วค่อยไล่ตามเวลาล่าสุด
+  // เรียงให้ที่ต้องแก้ขึ้นก่อน แล้วค่อยไล่ตามเวลาล่าสุด สุดท้ายค่อยตัดสินด้วยลำดับเดิมในชีต (ใหม่กว่า = ล่างกว่า = ก่อน)
   const when = r => String(r.generated_at || r.updated_at || "");
-  rows.sort((a,b) => (up(b.status)==="ERROR") - (up(a.status)==="ERROR")
-                  || when(b).localeCompare(when(a)));
+  rows.sort((a,b) => (up(b.r.status)==="ERROR") - (up(a.r.status)==="ERROR")
+                  || when(b.r).localeCompare(when(a.r))
+                  || (b.i - a.i));
+  const sorted = rows.map(({r}) => r);
 
-  if (!rows.length){
+  if (!sorted.length){
     $("resBulk").style.display = "none";
     $("results").innerHTML = `<div class="empty">${DB.sheet.tracker.length
       ? "ยังไม่มีสัญญาที่ n8n สร้าง — ตั้ง generation_requested = YES แล้วกด “สั่งสร้างเอกสาร” (ไม่มีรอบอัตโนมัติแล้ว)"
@@ -3133,7 +3139,7 @@ function renderResults(){
     return;
   }
 
-  const shown = rows.slice(0, 12);
+  const shown = sorted.slice(0, 12);
   $("results").classList.toggle("pickable", cfgReady());
   $("results").innerHTML = shown.map(r => {
     const st = RES_STATE[up(r.status)] || { pill:"flat", label:r.status || "—" };
@@ -3156,8 +3162,8 @@ function renderResults(){
                       <button class="sm danger" data-delrow="${esc(r.contract_id)}" type="button">ลบ</button>` : ""
       }</div>` : ""}
     </div>`;
-  }).join("") + (rows.length > 12
-    ? `<div class="hint" style="padding-top:10px">แสดง 12 จาก ${rows.length} รายการ — เลือกทั้งหมดจะเลือกเฉพาะที่แสดงอยู่</div>` : "");
+  }).join("") + (sorted.length > 12
+    ? `<div class="hint" style="padding-top:10px">แสดง 12 จาก ${sorted.length} รายการ — เลือกทั้งหมดจะเลือกเฉพาะที่แสดงอยู่</div>` : "");
 
   $("results").querySelectorAll("[data-regen]").forEach(b =>
     b.addEventListener("click", () => requestRegen(b.dataset.regen, $("resMsg"))));
