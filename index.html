@@ -864,7 +864,9 @@ const save = () => localStorage.setItem(KEY, JSON.stringify(DB));
    แต่ตัว hash เองก็ยังฝังอยู่ในไฟล์นี้เหมือน DEFAULT_CFG ด้านบน คนที่เปิด dev tools ดูโค้ดได้ก็ข้ามได้อยู่ดี
    ถ้ายังไม่ตั้งไว้ (ค่าเป็น GATE_UNSET) จะไม่ล็อกเลย เปิดใช้ได้ทันทีเหมือนเดิม */
 const GATE_UNSET = "ยังไม่ได้ตั้งรหัสผ่าน";
-const GATE_HASH = "1274b721a8d05d37fcf52cf17e03dd30d0a63fba8c3031e2afd4845e7c1d181b";   // ID: cdm / รหัสผ่าน: cdm2025
+// ห้ามคอมเมนต์ ID/รหัสผ่านจริงไว้ข้างๆ ตรงนี้เด็ดขาด — ใครกด Ctrl+U ดู source ก็เห็นได้ทันที
+// ทำให้ hash ด้านล่างไม่มีความหมายอะไรเลย ถ้าจะเปลี่ยนรหัส ไปสร้างที่แท็บ "ตั้งค่า" แล้วเก็บ ID/รหัสผ่านไว้ที่อื่น (เช่น password manager)
+const GATE_HASH = "501347b41126d189c5db9588a97fd2c102244c88a234dd66073dfcf6777f0bf4";
 const GATE_KEY = "cdm-console-unlocked-v1";
 
 async function sha256Hex(text){
