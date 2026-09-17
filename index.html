@@ -217,6 +217,15 @@
   .gate{position:fixed; inset:0; z-index:200; display:none;
     align-items:center; justify-content:center; background:var(--plane); padding:24px}
   body.locked .gate{display:flex}
+
+  /* ---------- โหมดผู้เยี่ยมชม (ดูอย่างเดียว) ----------
+     ซ่อนแค่ที่หน้าเว็บ ไม่ใช่ด่านความปลอดภัยจริง — ตัวบังคับจริงอยู่ที่ Cloudflare Worker (ดู callScript) */
+  .viewer-mode .admin-only{display:none !important}
+  .viewer-banner{display:none}
+  .viewer-mode .viewer-banner{display:flex; align-items:center; gap:8px;
+    background:color-mix(in srgb, var(--warning) 16%, transparent);
+    border:1px solid color-mix(in srgb, var(--warning) 45%, transparent);
+    color:var(--warning-ink); font-size:12.5px; font-weight:600; padding:8px 14px; border-radius:8px; margin-bottom:12px}
   .gatebox{width:100%; max-width:340px; text-align:center}
   .gatebox h1{font-size:17px; margin:0 0 4px}
   .gatebox p{color:var(--ink-2); font-size:13px; margin:0 0 18px}
@@ -353,6 +362,8 @@
 </div>
 <div class="wrap">
 
+  <div class="viewer-banner">👁️ โหมดผู้เยี่ยมชม — ดูข้อมูลได้อย่างเดียว สร้าง/แก้ไข/ลบไม่ได้</div>
+
   <header class="top">
     <div>
       <h1>CDM Contract Console</h1>
@@ -360,7 +371,7 @@
     </div>
     <div class="row">
       <span class="src" id="srcInfo"></span>
-      <button class="primary" id="runBtn" type="button" style="display:none">สั่งสร้างเอกสาร</button>
+      <button class="primary admin-only" id="runBtn" type="button" style="display:none">สั่งสร้างเอกสาร</button>
       <button id="pullBtn" type="button">ดึงข้อมูลจากชีต</button>
       <button id="themeBtn" type="button">สลับโหมด</button>
     </div>
@@ -484,10 +495,10 @@
       <div class="spread" style="margin-bottom:14px">
         <h2 style="margin:0">รายชื่อสตรีมเมอร์</h2>
         <div class="row">
-          <button id="impStreamers" type="button">นำเข้า CSV</button>
+          <button class="admin-only" id="impStreamers" type="button">นำเข้า CSV</button>
           <button id="expStreamers" type="button">ส่งออก CSV</button>
-          <button id="pushStreamers" type="button">ส่งขึ้นชีต</button>
-          <button class="primary" id="addStreamer" type="button">+ เพิ่มสตรีมเมอร์</button>
+          <button class="admin-only" id="pushStreamers" type="button">ส่งขึ้นชีต</button>
+          <button class="primary admin-only" id="addStreamer" type="button">+ เพิ่มสตรีมเมอร์</button>
         </div>
       </div>
       <p class="hint" id="pushStreamersStatus" style="margin:-6px 0 12px"></p>
@@ -500,7 +511,7 @@
         <button class="sm" id="sortByDate" type="button">วันที่เพิ่ม/แก้ไขล่าสุด <span id="sortByDateArrow"></span></button>
       </div>
 
-      <div class="bulk" id="stBulk" style="display:none">
+      <div class="bulk admin-only" id="stBulk" style="display:none">
         <label><input type="checkbox" id="stPickAll">เลือกทั้งหมด</label>
         <span class="count" id="stPickCount"></span>
         <button class="sm danger" id="stPickDelete" type="button" disabled>ลบที่เลือก</button>
@@ -567,7 +578,7 @@
     <div class="card">
       <div class="spread" style="margin-bottom:12px">
         <h2 style="margin:0">ตรวจก่อนสร้าง</h2>
-        <button class="primary" id="makeBatch" type="button">สร้างและส่งขึ้นชีต</button>
+        <button class="primary admin-only" id="makeBatch" type="button">สร้างและส่งขึ้นชีต</button>
       </div>
       <div id="batchPreflight"></div>
     </div>
@@ -580,7 +591,7 @@
       <p class="sub" style="margin:-6px 0 12px">เฉพาะ <span class="mono">GENERATED</span> / <span class="mono">SIGNED</span> · เตือน 30 / 14 / 7 วัน ·
         ติ๊กเพื่อต่ออายุ ไม่ติ๊ก = ปล่อยให้หมดสัญญา</p>
       <div class="scroll"><table id="tExpiry"></table></div>
-      <div class="row" id="renewBar" style="margin-top:10px; display:none">
+      <div class="row admin-only" id="renewBar" style="margin-top:10px; display:none">
         <span id="renewCount" class="hint"></span>
         <button class="primary sm" id="renewGo" type="button">ต่ออายุที่เลือกไว้</button>
       </div>
@@ -661,17 +672,17 @@
       <h2>รหัสผ่านเข้าคอนโซล</h2>
       <p class="sub" style="margin:-6px 0 12px">กันคนเดินผ่านมาเปิดลิงก์เฉย ๆ — <b>ไม่ใช่ระบบความปลอดภัยจริง</b>
         ตัวกันข้อมูลจริงคือ Cloudflare Worker ที่คั่นกลางอยู่ก่อนถึง Apps Script (ดูหัวข้อ “เชื่อมต่อ Google Sheets” ด้านล่าง)</p>
-      <div class="grid">
+      <div class="grid admin-only">
         <div class="f"><label>ID</label><input id="gwId" placeholder="เช่น cdm"></div>
         <div class="f"><label>ตั้งรหัสผ่านใหม่</label><input id="gwNew" type="password"></div>
         <div class="f"><label>ยืนยันรหัสผ่าน</label><input id="gwConfirm" type="password"></div>
       </div>
       <div class="row" style="margin-top:12px">
-        <button class="primary" id="gwMake" type="button">สร้างรหัส</button>
+        <button class="primary admin-only" id="gwMake" type="button">สร้างรหัส</button>
         <button class="danger" id="gwLogout" type="button">ออกจากระบบเครื่องนี้</button>
         <span class="hint" id="gwStatus"></span>
       </div>
-      <div id="gwOut" style="display:none; margin-top:12px">
+      <div class="admin-only" id="gwOut" style="display:none; margin-top:12px">
         <label style="font-size:12.5px; color:var(--ink-2)">คัดลอกข้อความนี้ไปแทนที่ค่า <code>GATE_HASH</code>
           ใกล้ต้นไฟล์ cdm-console.html (คอมเมนต์ข้าง ๆ บอก ID/รหัสผ่านที่ใช้ตอนสร้างไว้ให้เอง)
           แล้วแจกไฟล์ใหม่ให้ทีม</label>
@@ -680,7 +691,7 @@
           <button id="gwCopy" type="button">คัดลอก</button>
         </div>
       </div>
-      <div class="callout warn" style="margin-top:12px"><b>ต้องแก้ไฟล์แล้วแจกใหม่ทุกครั้งที่เปลี่ยนรหัส</b>
+      <div class="callout warn admin-only" style="margin-top:12px"><b>ต้องแก้ไฟล์แล้วแจกใหม่ทุกครั้งที่เปลี่ยนรหัส</b>
         รหัสผ่านไม่ได้เก็บในชีตหรือที่ไหนที่แก้แล้วมีผลทันที ต้องนำ hash ที่ได้ไปแทนที่ในไฟล์
         แล้วอัปโหลดทับที่โฮสต์อีกครั้ง — คนที่ยังใช้ไฟล์เก่าจะพิมพ์รหัสใหม่ไม่ผ่าน จนกว่าจะโหลดไฟล์ใหม่</div>
     </div>
@@ -699,7 +710,7 @@
       </div>
     </div>
 
-    <div class="card">
+    <div class="card admin-only">
       <h2>สั่ง n8n ทำงานจากคอนโซล</h2>
       <p class="sub" style="margin:-6px 0 12px">ตั้งแล้วจะมีปุ่ม “สั่งสร้างเอกสารเดี๋ยวนี้” ที่หน้าภาพรวม ไม่ต้องเปิด n8n เอง
         ตั้งครั้งเดียวจากเครื่องไหนก็ได้ ทุกเครื่องเห็นค่าเดียวกันทันที</p>
@@ -713,7 +724,7 @@
       </div>
     </div>
 
-    <details class="card fold">
+    <details class="card fold admin-only">
       <summary>ล้างไฟล์กำพร้าในไดรฟ์ <span class="hint">— ไฟล์ที่ไม่มีสัญญาฉบับไหนอ้างถึงแล้ว</span></summary>
       <div class="foldbody">
       <p class="sub" style="margin:-6px 0 12px">
@@ -727,7 +738,7 @@
       </div>
     </details>
 
-    <details class="card fold">
+    <details class="card fold admin-only">
       <summary>นำเข้าข้อมูลจากไฟล์ CSV <span class="hint">— ใช้ตอนย้ายข้อมูลครั้งแรก</span></summary>
       <div class="foldbody">
       <p class="sub" style="margin:-6px 0 12px">export จากชีตแล้วลากมาวางได้หลายไฟล์พร้อมกัน — ถ้ามีไฟล์ Streamer_Master ด้วยและตั้งค่า Apps Script ไว้แล้ว จะส่งขึ้นชีตให้เลยอัตโนมัติ</p>
@@ -867,7 +878,14 @@ const GATE_UNSET = "ยังไม่ได้ตั้งรหัสผ่า
 // ห้ามคอมเมนต์ ID/รหัสผ่านจริงไว้ข้างๆ ตรงนี้เด็ดขาด — ใครกด Ctrl+U ดู source ก็เห็นได้ทันที
 // ทำให้ hash ด้านล่างไม่มีความหมายอะไรเลย ถ้าจะเปลี่ยนรหัส ไปสร้างที่แท็บ "ตั้งค่า" แล้วเก็บ ID/รหัสผ่านไว้ที่อื่น (เช่น password manager)
 const GATE_HASH = "1274b721a8d05d37fcf52cf17e03dd30d0a63fba8c3031e2afd4845e7c1d181b";
+// รหัสผ่าน "ผู้เยี่ยมชม" — ปลดล็อกได้แค่โหมดดูอย่างเดียว (ดูข้อมูล สร้าง/แก้/ลบไม่ได้)
+// ตัวที่บังคับสิทธิ์จริงคือ Cloudflare Worker (เช็ค viewerKey ด้านล่าง) ไม่ใช่ตรงนี้ — ที่นี่แค่แยกว่าใครกรอกรหัสไหนมา
+const VIEWER_GATE_HASH = "5769c4b96a801116a74fb99df0f322e09869165b56946f90d2ca01662a2accac";
 const GATE_KEY = "cdm-console-unlocked-v1";
+const GATE_ROLE_KEY = "cdm-console-role-v1";
+// ไม่ใช่ความลับ — ตั้งใจฝังไว้ให้ผู้เยี่ยมชมใช้ Worker เป็นคนบังคับว่าคีย์นี้ปลดล็อกได้แค่สิทธิ์อ่านเท่านั้น
+const VIEWER_KEY = "vutlA7Te2fB40IaiukZixsUR";
+const isViewer = () => localStorage.getItem(GATE_ROLE_KEY) === "viewer";
 
 async function sha256Hex(text){
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -878,7 +896,9 @@ const gateCombine = (id, pw) => String(id || "").trim().toLowerCase() + "|" + St
 
 function gateNeeded(){ return GATE_HASH !== GATE_UNSET && localStorage.getItem(GATE_KEY) !== "1"; }
 function setLocked(on){ document.body.classList.toggle("locked", on); }
+function applyRoleUI(){ document.body.classList.toggle("viewer-mode", isViewer()); }
 setLocked(gateNeeded());
+applyRoleUI();
 // ป้องกันชั้นที่สอง: ถ้ายังไม่ปลดล็อก ห้ามให้ข้อมูลจริงที่เคยแคชไว้ในเครื่องนี้จาก session ก่อนหน้า
 // ไปโผล่ใน DOM เด็ดขาด (ปกติกด "ออกจากระบบเครื่องนี้" จะล้างข้อมูลไปแล้ว แต่เผื่อกรณีอื่นที่ทำให้
 // ล็อกอยู่ทั้งที่มีข้อมูลค้าง — render() ที่รันตอนเปิดหน้าจะได้ไม่มีอะไรให้แสดงจริง ๆ)
@@ -900,9 +920,12 @@ async function tryUnlock(id, pw){
   }
   errEl.textContent = "กำลังตรวจสอบ...";
   const hash = await sha256Hex(gateCombine(id, pw));
-  if (hash === GATE_HASH){
+  const role = hash === GATE_HASH ? "admin" : hash === VIEWER_GATE_HASH ? "viewer" : null;
+  if (role){
     localStorage.setItem(GATE_KEY, "1");
+    localStorage.setItem(GATE_ROLE_KEY, role);
     setLocked(false);
+    applyRoleUI();
     pwEl.value = ""; errEl.textContent = "";
     // เพิ่งปลดล็อกสำเร็จ — ดึงข้อมูลจริงตอนนี้แหละ (ห้ามดึงไว้ตั้งแต่ก่อนปลดล็อก ไม่งั้นข้อมูลจะไปนอนรออยู่ใน DOM
     // ตั้งแต่ยังไม่ผ่านด่าน แค่สั่ง unhide .wrap ผ่าน DevTools ก็เห็นได้เลยโดยไม่ต้องรู้รหัสผ่านจริง)
@@ -1470,6 +1493,7 @@ $("s_name").addEventListener("input", () => {
 });
 
 $("saveStreamer").addEventListener("click", () => {
+  if (isViewer()) return toast("บัญชีผู้เยี่ยมชมดูข้อมูลได้อย่างเดียว","bad");
   // ฟอร์มไม่มีช่อง notes แต่ในชีตมี — ถ้าใส่ค่าว่างทับ ข้อความที่คนอื่นจดไว้จะหาย
   const prev = editingId ? findStreamer(editingId) : null;
   const rec = {
@@ -1530,6 +1554,7 @@ $("saveStreamer").addEventListener("click", () => {
 /* ส่งสตรีมเมอร์ทั้งก้อนในเครื่องขึ้นชีต — ใช้ทั้งตอนนำเข้า CSV (อัตโนมัติ) และปุ่ม "ส่งขึ้นชีต" (มือ)
    คนที่เคยส่งไปแล้วจะถูกข้ามให้เอง (skippedStreamers) ไม่ใช่ error ไม่ต้องกลัวส่งซ้ำ */
 async function pushStreamersNow(){
+  if (isViewer()) return { ok:false, reason:"viewer" };
   if (!cfgReady()) return { ok:false, reason:"noConfig" };
   if (!DB.streamers.length) return { ok:false, reason:"empty" };
   const say = t => { const el = $("pushStreamersStatus"); if (el) el.textContent = t; };
@@ -2056,6 +2081,7 @@ function renderBatchPreflight(){
   renderTplInfo();
 }
 $("makeBatch").addEventListener("click", async () => {
+  if (isViewer()) return toast("บัญชีผู้เยี่ยมชมดูข้อมูลได้อย่างเดียว","bad");
   const members = currentMembers();
   if (batchErrors().length || members.some(m=>m.chk.errors.length)) return;
   const bid = batchId(), now = todayISO();
@@ -2126,6 +2152,7 @@ $("makeBatch").addEventListener("click", async () => {
    ก็อปเงื่อนไขเดิม (ค่าจ้าง/ชุดเอกสาร/เกม) มาทั้งหมด ตั้งข้อ 12 ให้อ้างสัญญาเดิมอัตโนมัติ
    ไหลเข้า pushPending()/runWorkflow() เส้นเดียวกับปุ่ม "สร้างและส่งขึ้นชีต" — ไม่มีรอบอัตโนมัติ ต้องกดเอง */
 $("renewGo").addEventListener("click", async () => {
+  if (isViewer()) return toast("บัญชีผู้เยี่ยมชมดูข้อมูลได้อย่างเดียว","bad");
   const ids = Object.keys(renewSel);
   if (!ids.length) return;
   const rows = ids.map(cid => DB.sheet.tracker.find(r => r.contract_id === cid)).filter(Boolean);
@@ -2201,9 +2228,12 @@ $("clearRows").addEventListener("click", async () => {
 
 async function callScript(payload){
   if (!DB.cfg.url) throw new Error("ยังไม่ได้ตั้งค่า Apps Script");
+  // แนบ viewerKey เฉพาะตอนล็อกอินด้วยรหัสผู้เยี่ยมชม — Worker เป็นคนบังคับว่าคีย์นี้อ่านได้อย่างเดียว
+  // (ดูฝั่งหน้าเว็บ/ปุ่มก็ซ่อนไว้อยู่แล้ว แต่ด่านจริงคือฝั่ง Worker ต่อให้เลี่ยงหน้าเว็บมาก็โดนบล็อก)
+  const extra = isViewer() ? { viewerKey: VIEWER_KEY } : {};
   const res = await fetch(DB.cfg.url, {
     method:"POST", headers:{ "Content-Type":"text/plain;charset=utf-8" },
-    body: JSON.stringify(Object.assign({ secret: DB.cfg.secret }, payload)),
+    body: JSON.stringify(Object.assign({ secret: DB.cfg.secret }, extra, payload)),
   });
   return res.json();
 }
@@ -2220,6 +2250,7 @@ function nextFreeId(oldId, taken){
   return cid;
 }
 async function pushPending(){
+  if (isViewer()){ toast("บัญชีผู้เยี่ยมชมดูข้อมูลได้อย่างเดียว","bad"); return false; }
   if (!DB.pending.length){ toast("ยังไม่มีแถวสัญญา"); return false; }
   const say = t => { const el = $("pushStatus"); if (el) el.textContent = t; };
   say("กำลังส่ง...");
@@ -2270,6 +2301,7 @@ $("pushBtn").addEventListener("click", async () => {
    ส่งเฉพาะช่องที่แก้จริง Apps Script จะจับคู่ตามชื่อหัวคอลัมน์แล้วเขียนทับทีละช่อง
    ไม่แตะช่องอื่นในแถวเดียวกัน จะได้ไม่ทับค่าที่ n8n เขียนไว้ */
 async function updateSheetRows(sheet, keyField, rows){
+  if (isViewer()) throw new Error("บัญชีผู้เยี่ยมชมดูข้อมูลได้อย่างเดียว แก้ไขไม่ได้");
   const out = await callScript({ action:"update", sheet, keyField, rows });
   if (!out.ok) throw new Error(out.error || "ไม่ทราบสาเหตุ");
   return out.updated || 0;
@@ -2343,6 +2375,7 @@ function wireBulk(cfg){
 /** ลบสัญญา 1 ฉบับหรือหลายฉบับพร้อมกัน — ไฟล์ลงถังขยะ แถวออกจากชีต แต่ Automation_Log ยังอยู่
     เป็นการทำลายข้อมูล จึงต้องยืนยันด้วยการอ่านรายชื่อก่อนเสมอ */
 async function bulkDeleteContracts(ids){
+  if (isViewer()){ toast("บัญชีผู้เยี่ยมชมดูข้อมูลได้อย่างเดียว ลบไม่ได้","bad"); return; }
   if (!ids.length) return;
   const rows = ids.map(id => DB.sheet.tracker.find(r => String(r.contract_id) === String(id))).filter(Boolean);
   if (!rows.length) return;
@@ -2392,6 +2425,7 @@ async function deleteContract(contractId){ return bulkDeleteContracts([contractI
 
 /** ลบสตรีมเมอร์ 1 คนหรือหลายคน — ลบจากรายชื่อในเครื่องนี้เท่านั้น ไม่แตะ Streamer_Master หรือสัญญาที่สร้างแล้ว */
 async function bulkDeleteStreamers(ids){
+  if (isViewer()){ toast("บัญชีผู้เยี่ยมชมดูข้อมูลได้อย่างเดียว","bad"); return; }
   if (!ids.length) return;
   const names = ids.map(id => { const s = findStreamer(id); return s ? `${s.streamer_name} (${id})` : id; });
   if (!await ask({
@@ -2488,6 +2522,7 @@ function renderOrphans(){
 }
 
 async function trashOrphans(ids){
+  if (isViewer()){ toast("บัญชีผู้เยี่ยมชมดูข้อมูลได้อย่างเดียว ลบไม่ได้","bad"); return; }
   if (!ids.length) return;
   const picked = orphanFound.filter(o => ids.includes(o.id));
   if (!await ask({ title:"ย้ายไฟล์กำพร้าลงถังขยะ", danger:true, yes:`ย้าย ${ids.length} ไฟล์`,
@@ -2545,6 +2580,7 @@ function pollForCompletion(){
 }
 
 async function runWorkflow(btn){
+  if (isViewer()){ toast("บัญชีผู้เยี่ยมชมสั่งสร้างเอกสารไม่ได้","bad"); return false; }
   if (blank(DB.cfg.hook)){ toast("ยังไม่ได้ตั้งค่า Webhook — ไปที่แท็บ “ตั้งค่า”","bad"); return false; }
   // สองรอบวิ่งพร้อมกันจะเห็นแถวเดียวกันที่ยังเป็น YES แล้วสร้างเอกสารซ้ำ
   if (runInFlight){ toast("กำลังสั่ง n8n อยู่แล้ว รอสักครู่"); return false; }
@@ -2577,6 +2613,7 @@ $("runBtn").addEventListener("click", async e => {
   if (await runWorkflow(e.target)) toast("สั่ง n8n แล้ว — ผลจะขึ้นเองในไม่กี่วินาที", "ok");
 });
 $("saveHook").addEventListener("click", async () => {
+  if (isViewer()){ toast("บัญชีผู้เยี่ยมชมแก้ค่านี้ไม่ได้","bad"); return; }
   DB.cfg.hook = $("cfgHook").value.trim();
   DB.cfg.hookToken = $("cfgHookToken").value;
   save(); render();
@@ -2739,6 +2776,7 @@ $("gwMake").addEventListener("click", async () => {
 $("gwCopy").addEventListener("click", e => copyText($("gwHash").value, e.target));
 $("gwLogout").addEventListener("click", () => {
   localStorage.removeItem(GATE_KEY);
+  localStorage.removeItem(GATE_ROLE_KEY);
   // ล้างข้อมูลที่แคชไว้ในเครื่องนี้ด้วย ไม่ใช่แค่สถานะล็อก — ไม่งั้นข้อมูลจริงยังค้างอยู่ใน localStorage
   // เปิดหน้าใหม่มาเจอหน้าล็อกก็จริง แต่ข้อมูลเก่ายังไปโผล่ผ่านการ unhide DOM ได้อยู่ดี
   localStorage.removeItem(KEY);
@@ -3023,7 +3061,7 @@ const LIST_COLS = [
         .filter(([u])=>!blank(u))
         .map(([u,l])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join(" · ");
       const inSheet = !!DB.sheet.tracker.find(x=>String(x.contract_id)===String(r.contract_id));
-      const btns = inSheet && cfgReady()
+      const btns = inSheet && cfgReady() && !isViewer()
         ? `<button class="sm" data-editrow="${esc(r.contract_id)}" type="button">แก้</button>
            <button class="sm" data-regen="${esc(r.contract_id)}" type="button">สร้างใหม่</button>
            <button class="sm danger" data-delrow="${esc(r.contract_id)}" type="button">ลบ</button>` : "";
@@ -3148,16 +3186,17 @@ function renderResults(){
       [r.draft_file_url_mou,          "เปิด MOU"],
       [r.signed_file_url,             "ฉบับเซ็นแล้ว"],
     ].filter(([u]) => !blank(u));
+    const canEdit = cfgReady() && !isViewer();
     return `<div class="res">
-      ${cfgReady() ? `<input type="checkbox" class="pick" data-pick="${esc(r.contract_id)}">` : ""}
+      ${canEdit ? `<input type="checkbox" class="pick" data-pick="${esc(r.contract_id)}">` : ""}
       <span class="pill ${st.pill}">${esc(st.label)}</span>
       <div class="who">${esc(r.streamer_name || r.streamer_id)}
         <span class="mono">${esc(r.contract_id)}</span></div>
       <div class="when">${esc((r.generated_at || r.updated_at || "").slice(0,16))}</div>
       ${blank(r.error_message) ? "" : `<div class="msg bad">${esc(r.error_message)}</div>`}
-      ${files.length || cfgReady() ? `<div class="files">${files.map(([u,l]) =>
+      ${files.length || canEdit ? `<div class="files">${files.map(([u,l]) =>
         `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join("")}${
-        cfgReady() ? `<button class="sm" data-editrow="${esc(r.contract_id)}" type="button">แก้ข้อมูล</button>
+        canEdit ? `<button class="sm" data-editrow="${esc(r.contract_id)}" type="button">แก้ข้อมูล</button>
                       <button class="sm" data-regen="${esc(r.contract_id)}" type="button">สร้างใหม่</button>
                       <button class="sm danger" data-delrow="${esc(r.contract_id)}" type="button">ลบ</button>` : ""
       }</div>` : ""}
@@ -3173,8 +3212,9 @@ function renderResults(){
     b.addEventListener("click", () => deleteContract(b.dataset.delrow)));
 
   // เลือกหลายรายการต้องมีทางลบจริง (ต้องต่อ Apps Script) ไม่งั้นติ๊กแล้วไม่มีอะไรให้กด
-  $("resBulk").style.display = cfgReady() ? "flex" : "none";
-  if (cfgReady()){
+  // ผู้เยี่ยมชมไม่มีสิทธิ์ลบเลยไม่ต้องมีแถบนี้ให้เห็นด้วย
+  $("resBulk").style.display = (cfgReady() && !isViewer()) ? "flex" : "none";
+  if (cfgReady() && !isViewer()){
     wireBulk({
       root: $("results"), ids: shown.map(r => r.contract_id), picked: pickedContracts,
       allBox: $("resPickAll"), countEl: $("resPickCount"), delBtn: $("resPickDelete"), bulkEl: $("resBulk"),
@@ -3218,7 +3258,7 @@ function renderArchive(){
       gs.map(g => {
         const myIdx = idx++; groupsByIdx.push(g);
         const latestDate = fmtDMY((g.list[0].generated_at||"").slice(0,10)) || (g.list[0].generated_at||"").slice(0,10);
-        const bulkBar = cfgReady() ? `<div class="bulk" data-archbulk="${myIdx}" style="display:none">
+        const bulkBar = (cfgReady() && !isViewer()) ? `<div class="bulk" data-archbulk="${myIdx}" style="display:none">
             <label><input type="checkbox" data-archpickall="${myIdx}">เลือกทั้งหมด</label>
             <span class="count" data-archcount="${myIdx}"></span>
             <button class="sm danger" data-archpickdel="${myIdx}" type="button" disabled>ลบที่เลือก</button>
@@ -3236,7 +3276,7 @@ function renderArchive(){
     if (!g) return;
     const myIdx = table.dataset.archidx;
     tbl(table, [
-      ...(cfgReady() ? [
+      ...((cfgReady() && !isViewer()) ? [
         { h:"", cls:"pickcell", f:r=>`<input type="checkbox" data-pick="${esc(r.contract_id)}">` },
         { h:"", f:r=>`<button class="sm icon" data-editarch="${esc(r.contract_id)}" type="button" title="แก้ไข" aria-label="แก้ไข">✏️</button>
                       <button class="sm icon danger" data-delarch="${esc(r.contract_id)}" type="button" title="ลบ" aria-label="ลบ">🗑️</button>` },
@@ -3258,7 +3298,7 @@ function renderArchive(){
     table.querySelectorAll("[data-delarch]").forEach(b =>
       b.addEventListener("click", () => deleteContract(b.dataset.delarch)));
 
-    if (!cfgReady()) return;
+    if (!cfgReady() || isViewer()) return;
     const bulkEl = box.querySelector(`[data-archbulk="${myIdx}"]`);
     if (!bulkEl) return;
     bulkEl.style.display = "flex";
@@ -3372,10 +3412,13 @@ function render(){
   const pageStreamers = sortedStreamers.slice(stStart, stStart + STREAMERS_PER_PAGE);
 
   tbl(ts, [
-    { h:"", cls:"pickcell", f:s=>`<input type="checkbox" data-pick="${esc(s.streamer_id)}">` },
-    // ปุ่มแก้/ลบไว้หน้าสุด (ถัดจากติ๊ก) จะได้ไม่ต้องเลื่อนจอไปทางขวาเพื่อกดทุกครั้ง
-    { h:"", f:s=>`<button class="sm icon" data-edit="${esc(s.streamer_id)}" type="button" title="แก้ไข" aria-label="แก้ไข">✏️</button>
-                  <button class="sm icon danger" data-del="${esc(s.streamer_id)}" type="button" title="ลบ" aria-label="ลบ">🗑️</button>` },
+    // ผู้เยี่ยมชมดูได้อย่างเดียว ไม่ต้องมีช่องติ๊ก/ปุ่มแก้-ลบให้กดเลย
+    ...(isViewer() ? [] : [
+      { h:"", cls:"pickcell", f:s=>`<input type="checkbox" data-pick="${esc(s.streamer_id)}">` },
+      // ปุ่มแก้/ลบไว้หน้าสุด (ถัดจากติ๊ก) จะได้ไม่ต้องเลื่อนจอไปทางขวาเพื่อกดทุกครั้ง
+      { h:"", f:s=>`<button class="sm icon" data-edit="${esc(s.streamer_id)}" type="button" title="แก้ไข" aria-label="แก้ไข">✏️</button>
+                    <button class="sm icon danger" data-del="${esc(s.streamer_id)}" type="button" title="ลบ" aria-label="ลบ">🗑️</button>` },
+    ]),
     { h:"ID", cls:"mono", f:s=>esc(s.streamer_id) },
     { h:"ชื่อในวงการ", f:s=>esc(s.streamer_name) },
     { h:"โปรเจกต์", f:s=>{
@@ -3451,9 +3494,11 @@ function render(){
     .filter(x => x.d <= 30).sort((a,b)=>a.d-b.d);
   Object.keys(renewSel).forEach(cid => { if (!expiring.some(x=>x.r.contract_id===cid)) delete renewSel[cid]; });
   tbl($("tExpiry"), [
-    { h:"", cls:"pickcell", f:x=>`<input type="checkbox" data-renew="${esc(x.r.contract_id)}" ${renewSel[x.r.contract_id]?"checked":""}>` },
-    // ปุ่มแก้เป็นไอคอนแยกต่างหาก — เดิมทั้งแถวกดแล้วเปิดแก้ไข ซึ่งชนกับช่องติ๊ก/กรอกเดือนที่อยู่ในแถวเดียวกัน
-    { h:"", f:x=> cfgReady() ? `<button class="sm icon" data-editexp="${esc(x.r.contract_id)}" type="button" title="แก้ไข" aria-label="แก้ไข">✏️</button>` : "" },
+    ...(isViewer() ? [] : [
+      { h:"", cls:"pickcell", f:x=>`<input type="checkbox" data-renew="${esc(x.r.contract_id)}" ${renewSel[x.r.contract_id]?"checked":""}>` },
+      // ปุ่มแก้เป็นไอคอนแยกต่างหาก — เดิมทั้งแถวกดแล้วเปิดแก้ไข ซึ่งชนกับช่องติ๊ก/กรอกเดือนที่อยู่ในแถวเดียวกัน
+      { h:"", f:x=> cfgReady() ? `<button class="sm icon" data-editexp="${esc(x.r.contract_id)}" type="button" title="แก้ไข" aria-label="แก้ไข">✏️</button>` : "" },
+    ]),
     { h:"Contract ID", cls:"mono", f:x=>esc(x.r.contract_id) },
     { h:"สตรีมเมอร์", f:x=>esc(x.r.streamer_name||x.r.streamer_id) },
     { h:"วันหมดอายุ", cls:"mono", f:x=>esc(fmtDMY(x.r.contract_end)) },
