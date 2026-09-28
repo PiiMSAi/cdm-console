@@ -966,6 +966,18 @@ function longDate(iso){
   const [y,m,d] = iso.split("-").map(Number);
   return `${d} ${MONTHS[m-1]} ${y}`;
 }
+/* สัญญา Partner Streamer Agreement (Cabal PH): วันครบกำหนดเชื่อมต่อ Client Dashboard
+   = วันเริ่มสัญญา + 7 วัน (ยืนยันกับผู้ใช้แล้ว) ต้องตรงกับ WF-01 เป๊ะ */
+function addDays(iso, n){
+  if (!DATE_RE.test(iso||"")) return "";
+  const d = new Date(iso+"T00:00:00");
+  d.setDate(d.getDate()+n);
+  return d.toISOString().slice(0,10);
+}
+/* ช่องติ๊ก Primary Channel ใน Schedule C ของสัญญา PH — ■ = ติ๊ก, □ = ไม่ติ๊ก — ต้องตรงกับ WF-01 เป๊ะ */
+function tickFor(streamer, platformName){
+  return String(streamer.platform||"").trim() === platformName ? "■" : "□";
+}
 /* ต้องตรงกับ node "Validate + Build Variables" ใน WF-01 เป๊ะ
    ไม่งั้นตัวเลขที่พรีวิวจะไม่ตรงกับที่ลงในสัญญาจริง */
 function duration(a,b){
@@ -2850,6 +2862,7 @@ const DOC_LABEL = {
   CONTRACT_NDA_UC:"CONTRACT+NDA (UC)", MOU_UC:"MOU (UC)",
   CONTRACT_NDA_IC:"CONTRACT+NDA (IC)", MOU_IC:"MOU (IC)",
   CONTRACT_TH:"CONTRACT",           CONTRACT_ADS_TH:"CONTRACT",
+  PARTNER_STREAMER_AGREEMENT_PH:"AGREEMENT",
 };
 const cleanName = v => String(v == null ? "" : v).replace(/[\/\:*?"<>|]/g, " ").replace(/\s+/g, " ").trim();
 function outputFileName(streamer, docType){
@@ -2886,6 +2899,27 @@ function previewVars(streamer, ov, game){
     GAME_NAME:          game || "",
     PREVIOUS_CONTRACT_DATE: prevDate ? longDate(prevDate) : "",
     CLAUSE_12_HEADING:  prevDate ? "12. Contract termination and replacement clause" : "",
+    // ── สัญญา Partner Streamer Agreement (Cabal PH) ── ต้องให้ผลตรงกับ WF-01
+    // GAME_ACCOUNT_ID / FOLLOWERS_AT_SIGNING ยังไม่มีช่องกรอกในหน้าสร้างรอบสัญญา
+    // (ต้องกรอกตรงในชีต Contract_Tracker ไปก่อนจนกว่าจะเพิ่มช่องกรอกในคอนโซล)
+    COMPANY_REG_NO:        proj.company_registration_no || "",
+    COMPANY_REP_POSITION:  proj.company_representative_position || "",
+    COMPANY_NOTICE_EMAIL:  proj.company_notice_email || "",
+    CLIENT_DASHBOARD_URL:  proj.client_dashboard_url || "",
+    PH_AGENT_NAME:         proj.ph_agent_name || "",
+    PH_AGENT_ADDRESS:      proj.ph_agent_address || "",
+    PH_AGENT_EMAIL:        proj.ph_agent_email || "",
+    PHONE:                 streamer.phone || "",
+    BANK_NAME:             streamer.bank_name || "",
+    BANK_ACCOUNT_NAME:     streamer.bank_account_name || "",
+    BANK_ACCOUNT_NO:       streamer.bank_account_no || "",
+    CHANNEL_HANDLE:        streamer.channel_handle || "",
+    GAME_ACCOUNT_ID:       ov.gameAccountId || "",
+    FOLLOWERS_AT_SIGNING:  ov.followersAtSigning || "",
+    DASHBOARD_CONNECTION_DATE: longDate(addDays($("b_start").value, 7)),
+    TICK_FACEBOOK:         tickFor(streamer, "Facebook"),
+    TICK_YOUTUBE:          tickFor(streamer, "YouTube"),
+    TICK_TIKTOK:           tickFor(streamer, "TikTok"),
     // ── สัญญาภาษาไทย ── ต้องให้ผลตรงกับ WF-01
     FULL_NAME_TH:       streamer.legal_name_th || "",
     ADDRESS_TH:         streamer.address_th || "",
