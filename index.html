@@ -2949,7 +2949,7 @@ function previewVars(streamer, ov, game){
 }
 
 /* ตัวแปรที่ปล่อยว่างได้ ไม่ถือว่าผิด */
-const PV_OPTIONAL = ["CLAUSE_12_HEADING","CLAUSE_12_BODY","PREVIOUS_CONTRACT_DATE"];
+const PV_OPTIONAL = ["CLAUSE_12_HEADING","CLAUSE_12_BODY","PREVIOUS_CONTRACT_DATE","STREAMER_TIN"];
 
 function fillLine(text, vars){
   return esc(text).replace(/\{\{([A-Z_0-9]+)\}\}/g, (m, name) => {
