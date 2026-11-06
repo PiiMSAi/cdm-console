@@ -411,7 +411,7 @@
         <label class="live" title="ดึงข้อมูลจากชีตให้เองทุก 1 นาที ระหว่างเปิดหน้านี้ค้างไว้">
           <input type="checkbox" id="autoPull"><span id="liveDot"></span>อัปเดตอัตโนมัติ</label>
       </div>
-      <p class="sub" style="margin:0 0 6px">n8n ไม่ส่งอีเมลแล้ว — สถานะทั้งหมดมาขึ้นตรงนี้แทน
+      <p class="sub" style="margin:0 0 6px">ระบบไม่ส่งอีเมลแจ้งผลแล้ว — สถานะทั้งหมดมาขึ้นตรงนี้แทน
         <span class="hint" id="resMsg"></span></p>
       <div class="bulk" id="resBulk" style="display:none">
         <label><input type="checkbox" id="resPickAll">เลือกทั้งหมด</label>
@@ -643,7 +643,7 @@
   <div class="page" id="p-preflight">
     <div class="card">
       <h2>แถวในชีตที่สั่ง generate ไว้</h2>
-      <p class="sub" style="margin:-6px 0 12px">ตรวจด้วยกฎเดียวกับ n8n WF-01 — แถวที่ “ไม่ผ่าน” จะถูกตีกลับเป็น <span class="mono">ERROR</span></p>
+      <p class="sub" style="margin:-6px 0 12px">ตรวจด้วยกฎเดียวกับตอนสร้างสัญญาจริง — แถวที่ “ไม่ผ่าน” จะถูกตีกลับเป็น <span class="mono">ERROR</span></p>
       <div class="scroll"><table id="tPreflight"></table></div>
     </div>
   </div>
@@ -711,8 +711,8 @@
     </div>
 
     <div class="card admin-only">
-      <h2>สั่ง n8n ทำงานจากคอนโซล</h2>
-      <p class="sub" style="margin:-6px 0 12px">ตั้งแล้วจะมีปุ่ม “สั่งสร้างเอกสารเดี๋ยวนี้” ที่หน้าภาพรวม ไม่ต้องเปิด n8n เอง
+      <h2>เชื่อมต่อระบบสร้างสัญญา (สั่งงานจากคอนโซล)</h2>
+      <p class="sub" style="margin:-6px 0 12px">ตั้งแล้วจะมีปุ่ม “สั่งสร้างเอกสาร” ที่มุมขวาบนของหน้า ไม่ต้องเปิดระบบหลังบ้านเอง (ใส่ URL และข้อความลับ = ค่า WEBHOOK_TOKEN ของบริการสร้างสัญญา)
         ตั้งครั้งเดียวจากเครื่องไหนก็ได้ ทุกเครื่องเห็นค่าเดียวกันทันที</p>
       <div class="grid">
         <div class="f"><label>Webhook URL</label><input id="cfgHook" placeholder="https://.../webhook/cdm-run"></div>
@@ -827,7 +827,7 @@
         <div class="f"><label>วันจบสัญญา</label><span class="dt"><input class="dtxt" data-for="e_end" inputmode="numeric" placeholder="วว/ดด/ปปปป" autocomplete="off"><span class="dcal" title="เลือกจากปฏิทิน">📅<input type="date" id="e_end"></span></span></div>
       </div>
       <div class="callout"><b>บันทึกแล้วจะเขียนลงชีตทันที</b>
-        ถ้าอยากให้ n8n สร้างเอกสารใหม่ด้วยค่าที่แก้ ให้กด “สั่งสร้างใหม่” ที่รายการหลังบันทึก</div>
+        ถ้าอยากให้ระบบสร้างเอกสารใหม่ด้วยค่าที่แก้ ให้กด “สั่งสร้างใหม่” ที่รายการหลังบันทึก</div>
       <div class="row" style="margin-top:12px">
         <button class="primary" id="editSave" type="button">บันทึกลงชีต</button>
         <button id="editCancel" type="button">ยกเลิก</button>
@@ -2151,13 +2151,13 @@ $("makeBatch").addEventListener("click", async () => {
      แถวจะค้างเป็น YES เฉย ๆ จนกว่าจะมีคนกดสั่งสร้างเอง ไม่มีอะไรมาหยิบไปทำให้เองอีกต่อไป */
   if (blank(DB.cfg.hook)){
     toast(`สร้างและส่งขึ้นชีตแล้ว ${made.length} สัญญา · รอบ ${bid}\n` +
-          `ยังไม่ได้ตั้งค่า webhook n8n — ต้องไปตั้งค่าในแท็บ "ตั้งค่า" แล้วกด "สั่งสร้างเอกสาร" เอง` +
+          `ยังไม่ได้ตั้งค่าการเชื่อมต่อ webhook — ต้องไปตั้งค่าในแท็บ "ตั้งค่า" แล้วกด "สั่งสร้างเอกสาร" เอง` +
           `\nไม่มีรอบอัตโนมัติแล้ว ถ้าไม่กด สัญญานี้จะไม่ถูกสร้างจนกว่าจะมีคนกด`, "bad", 9000);
     return;
   }
   if (await runWorkflow($("runBtn")))
     toast(`สร้างครบทั้งรอบแล้ว ${made.length} สัญญา · ${bid}\n` +
-          `n8n กำลังสร้างเอกสาร — ผลจะขึ้นเองที่หน้าภาพรวมในไม่กี่วินาที`, "ok", 8000);
+          `กำลังสร้างเอกสาร — ผลจะขึ้นเองที่หน้าภาพรวมในไม่กี่วินาที`, "ok", 8000);
 });
 
 /* ══════════ ต่ออายุสัญญาที่ใกล้หมด ══════════
@@ -2204,7 +2204,7 @@ $("renewGo").addEventListener("click", async () => {
   if (!sent) return;
   if (blank(DB.cfg.hook)){
     toast(`ต่ออายุและส่งขึ้นชีตแล้ว ${built.length} สัญญา\n` +
-          `ยังไม่ได้ตั้งค่า webhook n8n — ต้องไปตั้งค่าในแท็บ "ตั้งค่า" แล้วกด "สั่งสร้างเอกสาร" เอง`, "bad", 9000);
+          `ยังไม่ได้ตั้งค่าการเชื่อมต่อ webhook — ต้องไปตั้งค่าในแท็บ "ตั้งค่า" แล้วกด "สั่งสร้างเอกสาร" เอง`, "bad", 9000);
     return;
   }
   if (await runWorkflow($("runBtn")))
@@ -2333,10 +2333,10 @@ async function requestRegen(contractId, msgEl){
     Object.assign(row, patch);
     save(); render();
     if (blank(DB.cfg.hook)){
-      if (msgEl) msgEl.textContent = "ตั้ง YES ในชีตแล้ว แต่ยังไม่ได้ตั้งค่า webhook n8n — ไปตั้งค่าแล้วกดสั่งสร้างเอง ไม่มีรอบอัตโนมัติแล้ว";
+      if (msgEl) msgEl.textContent = "ตั้ง YES ในชีตแล้ว แต่ยังไม่ได้ตั้งค่าการเชื่อมต่อ webhook — ไปตั้งค่าแล้วกดสั่งสร้างเอง ไม่มีรอบอัตโนมัติแล้ว";
       return;
     }
-    if (msgEl) msgEl.textContent = "สั่งแล้ว — กำลังให้ n8n สร้างเอกสาร";
+    if (msgEl) msgEl.textContent = "สั่งแล้ว — กำลังสร้างเอกสาร";
     scheduleRun();
   } catch(err){ if (msgEl) msgEl.textContent = "ไม่สำเร็จ: " + err.message; }
 }
@@ -2461,7 +2461,7 @@ function scheduleRun(ms){
   clearTimeout(runTimer);
   runTimer = setTimeout(async () => {
     if (await runWorkflow($("runBtn")))
-      toast("สั่ง n8n แล้ว — ผลจะขึ้นเองที่หน้าภาพรวมในไม่กี่วินาที", "ok");
+      toast("สั่งสร้างแล้ว — ผลจะขึ้นเองที่หน้าภาพรวมในไม่นาน", "ok");
   }, ms == null ? 1500 : ms);
 }
 
@@ -2595,7 +2595,7 @@ async function runWorkflow(btn){
   if (isViewer()){ toast("บัญชีผู้เยี่ยมชมสั่งสร้างเอกสารไม่ได้","bad"); return false; }
   if (blank(DB.cfg.hook)){ toast("ยังไม่ได้ตั้งค่า Webhook — ไปที่แท็บ “ตั้งค่า”","bad"); return false; }
   // สองรอบวิ่งพร้อมกันจะเห็นแถวเดียวกันที่ยังเป็น YES แล้วสร้างเอกสารซ้ำ
-  if (runInFlight){ toast("กำลังสั่ง n8n อยู่แล้ว รอสักครู่"); return false; }
+  if (runInFlight){ toast("กำลังสั่งสร้างอยู่แล้ว รอสักครู่"); return false; }
   runInFlight = true;
   const old = btn.textContent;
   btn.textContent = "กำลังสั่ง..."; btn.disabled = true;
@@ -2605,16 +2605,16 @@ async function runWorkflow(btn){
       headers:{ "Content-Type":"application/json", "x-cdm-token": DB.cfg.hookToken || "" },
       body: JSON.stringify({ source:"cdm-console", at:new Date().toISOString() }),
     });
-    if (res.status === 401 || res.status === 403) throw new Error("ข้อความลับไม่ตรงกับ Header Auth ใน n8n");
-    if (res.status === 404) throw new Error("ไม่พบ Webhook — workflow ยังไม่ Activate หรือ URL ผิด");
-    if (!res.ok) throw new Error("n8n ตอบกลับ " + res.status);
+    if (res.status === 401 || res.status === 403) throw new Error("ข้อความลับ (token) ไม่ตรงกับที่ตั้งไว้ที่บริการสร้างสัญญา (ตัวแปร WEBHOOK_TOKEN)");
+    if (res.status === 404) throw new Error("ไม่พบ Webhook — URL ผิด หรือบริการสร้างสัญญายังไม่เปิดใช้งาน");
+    if (!res.ok) throw new Error("ระบบสร้างสัญญาตอบกลับ " + res.status);
     btn.textContent = "สั่งแล้ว";
     // n8n ทำงานเป็นรอบ ไม่ตอบกลับตอนเสร็จ จึงต้องตามไปดึงผลเอง
     pollForCompletion();
     return true;
   } catch(err){
     toast("สั่งไม่สำเร็จ: " + err.message +
-      "\nถ้าขึ้นว่า Failed to fetch มักเป็นเพราะ n8n ยังไม่อนุญาต CORS ให้หน้านี้", "bad");
+      "\nถ้าขึ้นว่า Failed to fetch มักเป็นเพราะบริการสร้างสัญญายังไม่อนุญาต CORS ให้หน้านี้ (ตรวจตัวแปร ALLOWED_ORIGIN ของบริการ) หรือบริการหยุดทำงาน", "bad");
     return false;
   } finally {
     runInFlight = false;
@@ -2622,7 +2622,7 @@ async function runWorkflow(btn){
   }
 }
 $("runBtn").addEventListener("click", async e => {
-  if (await runWorkflow(e.target)) toast("สั่ง n8n แล้ว — ผลจะขึ้นเองในไม่กี่วินาที", "ok");
+  if (await runWorkflow(e.target)) toast("สั่งสร้างแล้ว — ผลจะขึ้นเองในไม่นาน", "ok");
 });
 $("saveHook").addEventListener("click", async () => {
   if (isViewer()){ toast("บัญชีผู้เยี่ยมชมแก้ค่านี้ไม่ได้","bad"); return; }
@@ -3207,7 +3207,7 @@ function renderResults(){
   if (!sorted.length){
     $("resBulk").style.display = "none";
     $("results").innerHTML = `<div class="empty">${DB.sheet.tracker.length
-      ? "ยังไม่มีสัญญาที่ n8n สร้าง — ตั้ง generation_requested = YES แล้วกด “สั่งสร้างเอกสาร” (ไม่มีรอบอัตโนมัติแล้ว)"
+      ? "ยังไม่มีสัญญาที่ระบบสร้าง — ตั้ง generation_requested = YES แล้วกด “สั่งสร้างเอกสาร” (ไม่มีรอบอัตโนมัติแล้ว)"
       : "ยังไม่มีข้อมูลจากชีต — กด “ดึงข้อมูลจากชีต” ด้านบน"}</div>`;
     return;
   }
@@ -3363,10 +3363,10 @@ function renderNextUp(ctx){
           w:"ดูเหตุผลในรายการด้านล่าง แก้ข้อมูลในชีตแล้วตั้ง generation_requested = YES ใหม่", a:"" };
   else if (ctx.failing)
     c = { t:"hot",  i:"⚠", b:`มี ${ctx.failing} สัญญาที่ข้อมูลยังไม่ครบ`,
-          w:"n8n จะตีกลับถ้าปล่อยไว้ — ตรวจว่าขาดอะไร", a:go("check") };
+          w:"ระบบจะตีกลับถ้าปล่อยไว้ — ตรวจว่าขาดอะไร", a:go("check") };
   else if (DB.pending.length)
     c = { t:"hot",  i:"↑", b:`มี ${DB.pending.length} สัญญาค้างอยู่ ยังไม่ขึ้นชีต`,
-          w:"ครั้งก่อนส่งไม่สำเร็จ — กดส่งซ้ำ ไม่งั้น n8n จะไม่เห็นสัญญาชุดนี้", a:go("push") };
+          w:"ครั้งก่อนส่งไม่สำเร็จ — กดส่งซ้ำ ไม่งั้นระบบจะไม่เห็นสัญญาชุดนี้", a:go("push") };
   else if (!DB.streamers.length)
     c = { t:"",     i:"+", b:"เริ่มด้วยการเพิ่มสตรีมเมอร์",
           w:"กรอกข้อมูลคนที่จะทำสัญญาก่อน แล้วค่อยสร้างรอบสัญญา", a:go("streamers") };
@@ -3378,7 +3378,7 @@ function renderNextUp(ctx){
     // ต้องกดสั่งเองเท่านั้น ไม่งั้นแถวจะค้างเป็น YES เฉย ๆ ไม่ถูกสร้างจนกว่าจะมีคนกด
     c = blank(DB.cfg.hook)
       ? { t:"hot", i:"⋯", b:`สั่งสร้างไว้ ${ctx.requested} ฉบับ แต่ยังไม่ได้ตั้งค่า webhook`,
-          w:"ไม่มีรอบอัตโนมัติแล้ว ต้องตั้งค่า n8n ก่อนถึงจะสร้างได้", a:go("settings") }
+          w:"ไม่มีรอบอัตโนมัติแล้ว ต้องตั้งค่าการเชื่อมต่อระบบสร้างสัญญาก่อนถึงจะสร้างได้", a:go("settings") }
       : { t:"hot", i:"⋯", b:`สั่งสร้างไว้ ${ctx.requested} ฉบับ ยังไม่ถูกสร้าง`,
           w:"ไม่มีรอบอัตโนมัติแล้ว ต้องกดสั่งสร้างเอง",
           a:`<button class="primary" id="nextupRun" type="button">สั่งสร้างเอกสารเลย</button>` };
@@ -3393,7 +3393,7 @@ function renderNextUp(ctx){
     () => $("tabs").querySelector(`button[data-p="${b.dataset.goto}"]`).click()));
   const runBtn2 = document.getElementById("nextupRun");
   if (runBtn2) runBtn2.addEventListener("click", async () => {
-    if (await runWorkflow(runBtn2)) toast("สั่ง n8n แล้ว — ผลจะขึ้นเองในไม่กี่วินาที", "ok");
+    if (await runWorkflow(runBtn2)) toast("สั่งสร้างแล้ว — ผลจะขึ้นเองในไม่นาน", "ok");
   });
 }
 
@@ -3638,7 +3638,7 @@ function render(){
   // แสดงเฉพาะตัวเลขที่มีความหมายตอนนี้ — ตัวที่เป็น 0 และเป็นเรื่อง Phase 2 ซ่อนไว้
   // d = คีย์รายการที่จะเปิดเมื่อกด · g = ไปที่แท็บอื่นแทนเพราะไม่ใช่รายการสัญญา
   DRILL.pending   = { title:"ค้างส่ง ยังไม่ขึ้นชีต", rows:DB.pending };
-  DRILL.requested = { title:"สั่งสร้างไว้ รอ n8n", rows:requested };
+  DRILL.requested = { title:"สั่งสร้างไว้ รอระบบทำงาน", rows:requested };
   DRILL.failing   = { title:"ข้อมูลยังไม่ครบ",    rows:failing.map(c=>c.row) };
   DRILL.err       = { title:"สร้างไม่สำเร็จ",     rows:tracker.filter(r=>up(r.status)==="ERROR") };
   DRILL.waitSign  = { title:"รอลายเซ็น",         rows:tracker.filter(r=>["SENDING","SENT","VIEWED","PARTIALLY_SIGNED"].includes(up(r.status))) };
@@ -3647,8 +3647,8 @@ function render(){
   $("tiles").innerHTML = [
     { l:"สตรีมเมอร์", v:DB.streamers.length, h:`Active ${DB.streamers.filter(s=>String(s.active_status).toLowerCase()==="active").length} คน`, c:"--s3", always:1, g:"streamers-list" },
     { l:"ค้างส่ง", v:DB.pending.length, h:"ยังไม่ขึ้นชีต", c:"--accent", d:"pending" },
-    { l:"สั่ง generate", v:requested.length, h:"รอ n8n ทำงาน", c:"--s4", always:1, d:"requested" },
-    { l:"ติดปัญหา", v:failing.length, h:"n8n จะตีกลับ", c:"--critical", d:"failing" },
+    { l:"สั่ง generate", v:requested.length, h:"รอระบบทำงาน", c:"--s4", always:1, d:"requested" },
+    { l:"ติดปัญหา", v:failing.length, h:"ระบบจะตีกลับ", c:"--critical", d:"failing" },
     { l:"สร้างไม่สำเร็จ", v:errCount, h:"ต้องแก้", c:"--serious", d:"err" },
     { l:"รอลายเซ็น", v:waitSign, h:"ส่งให้เซ็นแล้ว", c:"--s5", d:"waitSign" },
     { l:"หมดอายุใน 7 วัน", v:exp7, h:"ต้องเตือนวันนี้", c:"--warning", d:"exp7" },
