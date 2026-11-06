@@ -347,6 +347,13 @@
   .paper .miss{background:color-mix(in srgb,var(--critical) 20%,transparent);
     color:var(--critical-ink); padding:0 3px; border-radius:3px; font-weight:700}
 
+
+  /* ── ข้อความผิดพลาดภาษาคน ── */
+  .errbox{font-size:13px; line-height:1.55}
+  .errbox ul{margin:4px 0 6px; padding-left:18px}
+  .errbox .fix{color:var(--ink-2)}
+  .errbox details{margin-top:4px; font-size:12px; color:var(--ink-2); word-break:break-word}
+  .errbox summary{cursor:pointer}
 </style>
 </head>
 <body>
@@ -367,36 +374,36 @@
   <header class="top">
     <div>
       <h1>CDM Contract Console</h1>
-      <p class="sub">สร้างสัญญาเป็นรอบ · ตรวจก่อนส่ง · ติดตามสถานะ — ข้อมูลสัญญาซิงก์ผ่าน Google Sheet ทุกเครื่อง</p>
+      <p class="sub">สร้างสัญญาเป็นรอบ · ตรวจความพร้อม · ติดตามสถานะ — ข้อมูลสัญญาซิงก์ผ่าน Google Sheet ทุกเครื่อง</p>
     </div>
     <div class="row">
       <span class="src" id="srcInfo"></span>
-      <button class="primary admin-only" id="runBtn" type="button" style="display:none">สั่งสร้างเอกสาร</button>
-      <button id="pullBtn" type="button">ดึงข้อมูลจากชีต</button>
-      <button id="themeBtn" type="button">สลับโหมด</button>
+      <button class="primary admin-only" id="runBtn" type="button" style="display:none" title="ให้ระบบสร้างไฟล์สัญญาจากรายการที่สั่งสร้างไว้ (ปกติระบบสั่งให้เองหลังกด สร้างและส่งขึ้นชีต)">สั่งสร้างเอกสาร</button>
+      <button id="pullBtn" type="button" title="โหลดข้อมูลล่าสุดจาก Google Sheet — กดเมื่ออยากเห็นผลใหม่ทันที">ดึงข้อมูลจากชีต</button>
+      <button id="themeBtn" type="button" title="สลับระหว่างหน้าจอสีมืดและสีสว่าง">สลับโหมด</button>
     </div>
   </header>
 
   <div class="shell">
   <nav class="tabs" id="tabs">
-    <button data-p="home" class="on" type="button">ภาพรวม</button>
+    <button data-p="home" class="on" type="button" title="หน้าแรก: ผลการสร้างสัญญา และงานที่ควรทำต่อ">ภาพรวม</button>
 
     <div class="side-label">สตรีมเมอร์</div>
-    <button data-p="streamers-add" type="button">เพิ่มสตรีมเมอร์ใหม่</button>
-    <button data-p="streamers-list" type="button">รายชื่อสตรีมเมอร์</button>
+    <button data-p="streamers-add" type="button" title="กรอกข้อมูลคนที่จะทำสัญญาด้วย (ทำครั้งแรกครั้งเดียว)">เพิ่มสตรีมเมอร์ใหม่</button>
+    <button data-p="streamers-list" type="button" title="ค้นหา ดู และแก้ข้อมูลสตรีมเมอร์ที่มีอยู่">รายชื่อสตรีมเมอร์</button>
 
     <div class="side-label">สัญญา</div>
-    <button data-p="batch" type="button">สร้างรอบสัญญา</button>
-    <button data-p="renew" type="button">ต่ออายุสัญญา</button>
-    <button data-p="archive" type="button">คลังสัญญา</button>
+    <button data-p="batch" type="button" title="สร้างสัญญาให้หลายคนพร้อมกัน ในโครงการเดียวกัน">สร้างรอบสัญญา</button>
+    <button data-p="renew" type="button" title="ดูสัญญาที่ใกล้หมดอายุ และสร้างฉบับต่ออายุ">ต่ออายุสัญญา</button>
+    <button data-p="archive" type="button" title="ดูและเปิดไฟล์สัญญาที่สร้างเสร็จแล้ว แยกตามโครงการและรอบ">คลังสัญญา</button>
 
     <div class="side-label">ต้องดำเนินการ</div>
-    <button data-p="pending" type="button">รอส่งขึ้นชีต</button>
-    <button data-p="preflight" type="button">ตรวจก่อนส่ง</button>
-    <button data-p="unsigned" type="button">ส่งแล้วยังไม่เซ็น</button>
-    <button data-p="dupes" type="button">รายการซ้ำ</button>
+    <button data-p="pending" type="button" title="ใช้เฉพาะเมื่อสร้างสัญญาแล้วส่งขึ้นชีตไม่สำเร็จ — ปกติว่างเปล่า">ส่งขึ้นชีตซ้ำ</button>
+    <button data-p="preflight" type="button" title="ดูสัญญาที่สั่งสร้างไว้ และตรวจว่าข้อมูลครบพอจะสร้างได้ไหม">ตรวจก่อนสร้างเอกสาร</button>
+    <button data-p="unsigned" type="button" title="สัญญาที่ส่งให้เซ็นไปแล้ว แต่ยังไม่มีลายเซ็น">ส่งแล้วยังไม่เซ็น</button>
+    <button data-p="dupes" type="button" title="สัญญาที่ข้อมูลเหมือนกันจนอาจสร้างซ้ำ">รายการซ้ำ</button>
 
-    <button data-p="settings" type="button" style="margin-top:16px">ตั้งค่า</button>
+    <button data-p="settings" type="button" style="margin-top:16px" title="ตั้งค่าการเชื่อมต่อ (สำหรับผู้ดูแลระบบ)">ตั้งค่า</button>
   </nav>
   <div class="content">
 
@@ -448,7 +455,7 @@
 
       <div id="streamerForm">
         <div class="grid">
-          <div class="f"><label>streamer_id <span class="req">*</span></label><input id="s_id"></div>
+          <div class="f"><label>รหัสสตรีมเมอร์ <span class="req">*</span></label><input id="s_id" placeholder="ตั้งเอง ห้ามซ้ำ เช่น STR001"></div>
           <div class="f"><label>ชื่อในวงการ <span class="req">*</span></label><input id="s_name"></div>
           <div class="f"><label>ชื่อตามกฎหมาย (อังกฤษ)</label><input id="s_legal" placeholder="ใช้กับสัญญา Cabal PH เช่น Somchai Jaidee"></div>
           <div class="f"><label>อีเมล <span class="req">*</span></label><input id="s_email"></div>
@@ -456,7 +463,7 @@
           <div class="f"><label>ลิงก์ช่อง</label><input id="s_url"></div>
           <div class="f"><label>แพลตฟอร์ม</label><select id="s_platform">
             <option>Facebook</option><option>YouTube</option><option>TikTok</option><option>Twitch</option><option>Other</option></select></div>
-          <div class="f"><label>Project</label><input id="s_project"></div>
+          <div class="f"><label>โครงการ</label><input id="s_project"></div>
           <div class="f"><label>สถานะ</label><select id="s_active"><option>Active</option><option>Inactive</option></select></div>
           <div class="f"><label>เบอร์โทร</label><input id="s_phone"></div>
         </div>
@@ -531,7 +538,7 @@
       <h2>ข้อมูลร่วมของรอบสัญญา</h2>
       <p class="sub" style="margin:-6px 0 14px">กรอกครั้งเดียว ใช้กับทุกคนในรอบนี้</p>
       <div class="grid">
-        <div class="f"><label>Project <span class="req">*</span></label><select id="b_project"></select></div>
+        <div class="f"><label>โครงการ <span class="req">*</span></label><select id="b_project"></select></div>
         <div class="f"><label>ชุดเอกสาร <span class="req">*</span></label><select id="b_bundle"></select></div>
         <div class="f"><label>วันที่ทำสัญญา <span class="req">*</span></label><span class="dt"><input class="dtxt" data-for="b_cdate" inputmode="numeric" placeholder="วว/ดด/ปปปป" autocomplete="off"><span class="dcal" title="เลือกจากปฏิทิน">📅<input type="date" id="b_cdate"></span></span></div>
         <div class="f"><label>วันเริ่มสัญญา <span class="req">*</span></label><span class="dt"><input class="dtxt" data-for="b_start" inputmode="numeric" placeholder="วว/ดด/ปปปป" autocomplete="off"><span class="dcal" title="เลือกจากปฏิทิน">📅<input type="date" id="b_start"></span></span></div>
@@ -558,7 +565,7 @@
         </div>
       </div>
       <div class="pkbar">
-        <input type="search" id="pkFind" placeholder="ค้นหาชื่อ หรือ streamer_id" autocomplete="off">
+        <input type="search" id="pkFind" placeholder="ค้นหาชื่อ หรือรหัสสตรีมเมอร์" autocomplete="off">
         <label title="แสดงเฉพาะคนที่ project ตรงกับรอบสัญญานี้"><input type="checkbox" id="pkProj" checked>เฉพาะโครงการนี้</label>
         <label><input type="checkbox" id="pkSel">เฉพาะที่เลือก</label>
         <button class="sm" id="pkClear" type="button">ล้างที่เลือก</button>
@@ -611,7 +618,7 @@
   <div class="page" id="p-pending">
     <div class="card">
       <div class="spread" style="margin-bottom:12px">
-        <h2 style="margin:0">แถวที่ยังไม่ได้ขึ้นชีต</h2>
+        <h2 style="margin:0">สัญญาที่ส่งขึ้นชีตไม่สำเร็จ</h2>
         <button id="clearRows" class="danger" type="button">ล้างทั้งหมด</button>
       </div>
       <p class="sub" style="margin:-6px 0 12px">สร้างสัญญาไว้ในเครื่องนี้ แต่ยังส่งขึ้น Google Sheet ไม่สำเร็จ (เช่นเน็ตหลุดตอนกดส่ง) —
@@ -624,7 +631,7 @@
     </div>
 
     <details class="card fold">
-      <summary>วิธีสำรอง — คัดลอกไปวางในชีตเอง <span class="hint">— ใช้เมื่อ Apps Script มีปัญหา</span></summary>
+      <summary>วิธีสำรอง — คัดลอกไปวางในชีตเอง <span class="hint">— ใช้เมื่อการเชื่อมต่อชีตอัตโนมัติใช้ไม่ได้</span></summary>
       <div class="foldbody">
       <p class="sub" style="margin:-6px 0 12px">
         กดคัดลอก → เปิดชีต <b>Contract_Tracker</b> → คลิกเซลล์คอลัมน์ <b>A</b> ของแถวว่างแถวแรก → Ctrl+V</p>
@@ -642,8 +649,8 @@
   <!-- ============== ACTION NEEDED: PREFLIGHT ============== -->
   <div class="page" id="p-preflight">
     <div class="card">
-      <h2>แถวในชีตที่สั่ง generate ไว้</h2>
-      <p class="sub" style="margin:-6px 0 12px">ตรวจด้วยกฎเดียวกับตอนสร้างสัญญาจริง — แถวที่ “ไม่ผ่าน” จะถูกตีกลับเป็น <span class="mono">ERROR</span></p>
+      <h2>สัญญาที่สั่งสร้างไว้ (รอระบบสร้างเอกสาร)</h2>
+      <p class="sub" style="margin:-6px 0 12px">ตรวจด้วยกฎเดียวกับตอนสร้างสัญญาจริง — แถวที่ “ไม่ผ่าน” จะสร้างไม่สำเร็จ (ขึ้นสถานะ “ผิดพลาด”) — ให้แก้ข้อมูลตามคำแนะนำ แล้วกด “สร้างใหม่”</p>
       <div class="scroll"><table id="tPreflight"></table></div>
     </div>
   </div>
@@ -1337,7 +1344,7 @@ function checkContractRow(row, allRows){
       String(t.active).trim().toLowerCase()==="active" && String(t.project)===String(row.project));
     for (const doc of want){
       const t = active.find(x => up(x.doc_type) === up(doc));
-      if (!t) e.push(`ไม่มี template ที่ active สำหรับ ${row.project} / ${doc}`);
+      if (!t) e.push(`ไม่มีแม่แบบสัญญาที่เปิดใช้งานสำหรับ ${row.project} / ${doc}`);
       else if (blank(t.google_doc_file_id) || String(t.google_doc_file_id).startsWith("("))
         e.push(`template ${t.template_id} ยังไม่ได้ใส่ google_doc_file_id`);
     }
@@ -1603,7 +1610,7 @@ $("fileStreamers").addEventListener("change", e => {
     streamerPage = 1;
     save(); render();
     if (!cfgReady()){
-      toast(`นำเข้าแล้ว — เพิ่ม ${a} คน, อัปเดต ${u} คน\nยังไม่ได้ตั้งค่า Apps Script — บันทึกไว้ในเครื่องนี้ก่อน`,"ok");
+      toast(`นำเข้าแล้ว — เพิ่ม ${a} คน, อัปเดต ${u} คน\nยังไม่ได้ตั้งค่าการเชื่อมต่อชีต — บันทึกไว้ในเครื่องนี้ก่อน`,"ok");
       return;
     }
     // นำเข้าแล้วส่งขึ้นชีตต่อให้เลย ไม่ต้องกดปุ่มแยกอีกขั้น
@@ -1622,7 +1629,7 @@ $("expStreamers").addEventListener("click", () => {
 $("pushStreamers").addEventListener("click", async () => {
   const r = await pushStreamersNow();
   if (!r.ok){
-    if (r.reason === "noConfig") toast("ยังไม่ได้ตั้งค่า Apps Script ที่แท็บ “ตั้งค่า”","bad");
+    if (r.reason === "noConfig") toast("ยังไม่ได้ตั้งค่าการเชื่อมต่อชีต ที่แท็บ “ตั้งค่า”","bad");
     else if (r.reason === "empty") toast("ยังไม่มีสตรีมเมอร์ในเครื่องนี้");
     else toast("ส่งขึ้นชีตไม่สำเร็จ: " + r.error, "bad");
   }
@@ -1661,7 +1668,7 @@ function fillProjects(){
   const list = [...new Set(fromTpl.concat(fromProj))].sort();
   sel.innerHTML = list.length
     ? list.map(p => `<option${p===keep?" selected":""}>${esc(p)}</option>`).join("")
-    : `<option value="">— ยังไม่มีข้อมูล project —</option>`;
+    : `<option value="">— ยังไม่มีข้อมูลโครงการ (กด “ดึงข้อมูลจากชีต”) —</option>`;
 }
 /* ชุดเอกสารมาจากคอลัมน์ bundle ในชีต ไม่ใช่การเดาทุกชุดย่อยที่เป็นไปได้
    เพราะบาง doc_type ใช้ด้วยกันไม่ได้ เช่น สัญญารวมทุกเกมกับสัญญารายเกม */
@@ -1679,7 +1686,7 @@ function bundlesOfProject(){
 function fillBundles(){
   const sel = $("b_bundle"), keep = sel.value;
   const list = bundlesOfProject();
-  if (!list.length){ sel.innerHTML = `<option value="">— ไม่มี template ที่ active —</option>`; return; }
+  if (!list.length){ sel.innerHTML = `<option value="">— ยังไม่มีแม่แบบสัญญาที่เปิดใช้งาน —</option>`; return; }
   sel.innerHTML = list.map(b =>
     `<option value="${esc(b.value)}"${b.value===keep?" selected":""}>${esc(b.name)} (${b.docs.length} ฉบับ)</option>`).join("");
 }
@@ -1770,7 +1777,7 @@ function refreshRow(sid){
 function renderPicker(){
   const all = DB.streamers;
   if (!all.length){
-    $("picker").innerHTML = `<div class="empty">ยังไม่มีสตรีมเมอร์ — ไปเพิ่มที่แท็บ “สตรีมเมอร์”</div>`;
+    $("picker").innerHTML = `<div class="empty">ยังไม่มีสตรีมเมอร์ — ไปเพิ่มที่เมนู “เพิ่มสตรีมเมอร์ใหม่”</div>`;
     $("selCount").textContent = ""; return;
   }
   const list   = pickerRows();
@@ -2140,7 +2147,7 @@ $("makeBatch").addEventListener("click", async () => {
   if (!cfgReady()){
     // ยังไม่ได้ต่อ Apps Script — ตกกลับไปทางเดิม คัดลอกไปวางในชีตเอง
     $("tabs").querySelector('button[data-p="pending"]').click();
-    toast(`สร้างแล้ว ${made.length} สัญญาในรอบ ${bid}\nยังไม่ได้ตั้งค่า Apps Script — คัดลอกไปวางในชีตเองที่หน้านี้`);
+    toast(`สร้างแล้ว ${made.length} สัญญาในรอบ ${bid}\nยังไม่ได้ตั้งค่าการเชื่อมต่อชีต — คัดลอกไปวางในชีตเองที่หน้านี้`);
     return;
   }
   const sent = await pushPending();
@@ -2197,7 +2204,7 @@ $("renewGo").addEventListener("click", async () => {
 
   if (!cfgReady()){
     $("tabs").querySelector('button[data-p="pending"]').click();
-    toast(`สร้างแล้ว ${built.length} สัญญาต่ออายุ\nยังไม่ได้ตั้งค่า Apps Script — คัดลอกไปวางในชีตเองที่หน้านี้`);
+    toast(`สร้างแล้ว ${built.length} สัญญาต่ออายุ\nยังไม่ได้ตั้งค่าการเชื่อมต่อชีต — คัดลอกไปวางในชีตเองที่หน้านี้`);
     return;
   }
   const sent = await pushPending();
@@ -2239,7 +2246,7 @@ $("clearRows").addEventListener("click", async () => {
 });
 
 async function callScript(payload){
-  if (!DB.cfg.url) throw new Error("ยังไม่ได้ตั้งค่า Apps Script");
+  if (!DB.cfg.url) throw new Error("ยังไม่ได้ตั้งค่าการเชื่อมต่อชีต");
   // แนบ viewerKey เฉพาะตอนล็อกอินด้วยรหัสผู้เยี่ยมชม — Worker เป็นคนบังคับว่าคีย์นี้อ่านได้อย่างเดียว
   // (ดูฝั่งหน้าเว็บ/ปุ่มก็ซ่อนไว้อยู่แล้ว แต่ด่านจริงคือฝั่ง Worker ต่อให้เลี่ยงหน้าเว็บมาก็โดนบล็อก)
   const extra = isViewer() ? { viewerKey: VIEWER_KEY } : {};
@@ -2300,7 +2307,7 @@ async function pushPending(){
   } catch(err){
     say("ส่งไม่สำเร็จ: " + err.message);
     toast("ส่งขึ้นชีตไม่สำเร็จ: " + err.message +
-      "\nแถวยังอยู่ครบในแท็บ “ค้างส่ง” กดส่งซ้ำได้ ไม่ต้องกรอกใหม่", "bad");
+      "\nสัญญายังอยู่ครบในหน้า “ส่งขึ้นชีตซ้ำ” กดส่งซ้ำได้ ไม่ต้องกรอกใหม่", "bad");
     $("tabs").querySelector('button[data-p="pending"]').click();
     return false;
   }
@@ -2473,7 +2480,7 @@ let orphanFound = [];
 
 async function scanOrphans(){
   const btn = $("scanOrphanBtn"), say = t => $("orphanStatus").textContent = t;
-  if (!cfgReady()){ toast("ยังไม่ได้ตั้งค่า Apps Script — กรอกข้างบนก่อน", "bad"); return; }
+  if (!cfgReady()){ toast("ยังไม่ได้ตั้งค่าการเชื่อมต่อชีต — กรอกข้างบนก่อน", "bad"); return; }
   btn.disabled = true; say("กำลังสแกน...");
   $("orphanBox").innerHTML = "";
   try{
@@ -2649,7 +2656,7 @@ $("saveHook").addEventListener("click", async () => {
 
 /* ══════════ pull ══════════ */
 async function pullFromSheet(quiet){
-  if (!DB.cfg.url){ if (!quiet) toast("ยังไม่ได้ตั้งค่า Apps Script — ไปที่แท็บ “ตั้งค่า” หรือใช้การนำเข้า CSV แทน","bad"); return; }
+  if (!DB.cfg.url){ if (!quiet) toast("ยังไม่ได้ตั้งค่าการเชื่อมต่อชีต — ไปที่แท็บ “ตั้งค่า” หรือใช้การนำเข้า CSV แทน","bad"); return; }
   const btn = $("pullBtn"), old = btn.textContent;
   btn.textContent = "กำลังดึง..."; btn.disabled = true;
   try{
@@ -2686,7 +2693,7 @@ async function pullFromSheet(quiet){
       if (touched) filled++;
     });
     DB.sheet.fetchedAt = new Date().toLocaleString("th-TH");
-    DB.sheet.source = "Apps Script";
+    DB.sheet.source = "Google Sheet";
     lastPull = Date.now();
     save(); render();
     if (!quiet){
@@ -3068,6 +3075,70 @@ function rowsOpenEdit(el, rows, idOf){
   });
 }
 
+/* ══════════ แปลข้อความผิดพลาดของระบบเป็นภาษาคน ══════════
+   ระบบเขียนสาเหตุเป็นภาษาอังกฤษลงช่อง error_message (ตรงกับตัวตรวจฝั่งบริการสร้างสัญญา) คนใหม่อ่านแล้วไม่รู้ว่าต้องทำอะไร
+   จึงแปลทีละเงื่อนไขพร้อมบอกวิธีแก้ — ถ้าเจอข้อความที่ไม่รู้จักจะไม่เดา แค่บอกให้ลองสร้างใหม่/แจ้งผู้ดูแล
+   และเก็บข้อความเดิมไว้ใต้ "รายละเอียดทางเทคนิค" เสมอ (ผู้ดูแลต้องใช้ตอนไล่ปัญหา) */
+const ERR_FIELD_TH = {
+  streamer_id:"รหัสสตรีมเมอร์", streamer_name:"ชื่อสตรีมเมอร์", legal_name:"ชื่อตามกฎหมาย (อังกฤษ)",
+  legal_name_th:"ชื่อตามกฎหมาย (ไทย)", signer_email:"อีเมลผู้เซ็น", project:"โครงการ",
+  contract_type_bundle:"ชุดเอกสาร", currency:"สกุลเงิน", contract_date:"วันที่ทำสัญญา",
+  contract_start:"วันเริ่มสัญญา", contract_end:"วันจบสัญญา", game_name:"เกม",
+  clips_per_month:"จำนวนคลิปต่อเดือน", fee:"ค่าจ้าง", wallet_points:"points",
+  fee_usd:"ค่าจ้าง (USD)", fee_idr:"ค่าจ้าง (IDR)", previous_contract_date:"วันที่สัญญาเดิม",
+  dashboard_connect_date:"วันที่เชื่อมแดชบอร์ด",
+};
+const errField = f => ERR_FIELD_TH[f] || f;
+const FIX_EDIT = "กด “แก้ข้อมูล” ที่สัญญานี้ (หรือแก้ในหน้า “รายชื่อสตรีมเมอร์”) แล้วกด “สร้างใหม่”";
+const FIX_ADMIN = "แจ้งผู้ดูแลระบบให้ตรวจแท็บแม่แบบ/โครงการในชีต — ไม่ใช่ข้อมูลที่คุณกรอกผิด";
+const FIX_DIGITS = "ตรวจเลขในหน้า “รายชื่อสตรีมเมอร์” ถ้าเลขท้ายกลายเป็น 0 ให้ตั้งรูปแบบเซลล์ในชีตเป็น Plain text แล้วกรอกใหม่";
+const ERR_RULES = [
+  [/^Missing required field: legal_name or legal_name_th/, () => ({ w:"ยังไม่มีชื่อตามกฎหมายของสตรีมเมอร์ (ต้องมีอย่างน้อยภาษาไทยหรืออังกฤษ)", f:"เปิดหน้า “รายชื่อสตรีมเมอร์” แล้วกรอกชื่อตามกฎหมายของคนนี้ จากนั้นกด “สร้างใหม่”" })],
+  [/^Missing required field: game_name/, () => ({ w:"ยังไม่ได้เลือกเกม (แม่แบบนี้พิมพ์ชื่อเกมในหัวสัญญา)", f:FIX_EDIT })],
+  [/^Missing required field: clips_per_month/, () => ({ w:"ยังไม่ได้กรอกจำนวนคลิปต่อเดือน (สัญญา P2W ต้องใช้)", f:FIX_EDIT })],
+  [/^Missing required field: (\w+)/, m => ({ w:`ยังไม่ได้กรอก “${errField(m[1])}”`, f:FIX_EDIT })],
+  [/^streamer_id not found in Streamer_Master: (.*)$/, m => ({ w:`ไม่พบสตรีมเมอร์รหัส ${m[1]} ในรายชื่อ`, f:"เพิ่มคนนี้ที่หน้า “เพิ่มสตรีมเมอร์ใหม่” หรือตรวจว่ารหัสพิมพ์ถูกต้อง" })],
+  [/^Streamer is not Active: (.*)$/, m => ({ w:`สตรีมเมอร์ ${m[1]} ไม่ได้อยู่ในสถานะ Active`, f:"เปลี่ยนสถานะเป็น Active ที่หน้า “รายชื่อสตรีมเมอร์” ถ้ายังทำสัญญากับคนนี้อยู่ แล้วกด “สร้างใหม่”" })],
+  [/^Invalid email format: (.*)$/, m => ({ w:`อีเมลผู้เซ็นไม่ถูกรูปแบบ (${m[1]})`, f:"แก้ให้เป็นรูปแบบ ชื่อ@โดเมน เช่น name@example.com แล้วกด “สร้างใหม่”" })],
+  [/^project not found in Project_Master: (.*)$/, m => ({ w:`ไม่พบโครงการ “${m[1]}” ในรายการโครงการ`, f:"ตรวจชื่อโครงการให้ตรงกับที่มีในระบบ หรือให้ผู้ดูแลเพิ่มโครงการนี้" })],
+  [/^(fee|wallet_points|fee_usd|fee_idr) is not a number/, m => ({ w:`ช่อง “${errField(m[1])}” ต้องเป็นตัวเลขเท่านั้น`, f:"ลบตัวอักษรหรือสัญลักษณ์ออก (ใส่ได้เฉพาะตัวเลข) แล้วกด “สร้างใหม่”" })],
+  [/^Missing compensation/, () => ({ w:"ยังไม่ได้ใส่ค่าตอบแทน — ต้องมีค่าจ้างหรือ points อย่างน้อยหนึ่งอย่างที่มากกว่า 0", f:FIX_EDIT })],
+  [/^(\w+) must be YYYY-MM-DD, got: (.*)$/, m => ({ w:`วันที่ “${errField(m[1])}” ไม่ถูกรูปแบบ (ได้ค่า ${m[2]})`, f:"เลือกวันที่จากปฏิทินในหน้าแก้ข้อมูล หรือพิมพ์แบบ วว/ดด/ปปปป แล้วกด “สร้างใหม่”" })],
+  [/^contract_end must be after contract_start/, () => ({ w:"วันจบสัญญาต้องอยู่หลังวันเริ่มสัญญา", f:FIX_EDIT })],
+  [/^No active template for project=(.*) doc_type=(.*)$/, m => ({ w:`ไม่มีแม่แบบสัญญาที่เปิดใช้งานสำหรับโครงการ “${m[1]}” ชนิด ${m[2]}`, f:FIX_ADMIN })],
+  [/^Template (\S+) has no google_doc_file_id/, m => ({ w:`แม่แบบ ${m[1]} ยังไม่ได้ผูกกับไฟล์เอกสาร`, f:FIX_ADMIN })],
+  [/^Possible duplicate contract detected \((.*?), status=(.*?)\)/, m => ({ w:`อาจเป็นสัญญาซ้ำกับ ${m[1]} (สถานะ ${m[2]}) — สตรีมเมอร์ โครงการ ชุดเอกสาร และช่วงวันที่เหมือนกัน`, f:`เปิดดูสัญญา ${m[1]} ก่อน ถ้าเป็นฉบับเดียวกันไม่ต้องสร้างซ้ำ ถ้าตั้งใจสร้างใหม่จริงให้ปรึกษาผู้ดูแลก่อนลบฉบับเดิม` })],
+  [/^Duplicate generation request in the same batch \((.*?)\)/, m => ({ w:`สั่งสร้างซ้ำกับ ${m[1]} ในรอบเดียวกัน (ข้อมูลเหมือนกัน)`, f:"เหลือไว้ฉบับเดียว ลบหรือแก้อีกฉบับที่ซ้ำ" })],
+  [/^national_id \(NIK\) must be exactly 16 digits/, () => ({ w:"เลข NIK (อินโดนีเซีย) ต้องมี 16 หลักพอดี", f:FIX_DIGITS })],
+  [/^national_id must be exactly 13 digits/, () => ({ w:"เลขบัตรประชาชนต้องมี 13 หลักพอดี", f:FIX_DIGITS })],
+  [/^clips_per_month must be at least 7 \(got (.*?)\)/, m => ({ w:`จำนวนคลิปต่อเดือนต้องไม่ต่ำกว่า 7 (ตอนนี้ ${m[1]})`, f:"ตัวอย่างในข้อ 2.7 ของสัญญาจะไม่สมเหตุสมผลถ้าน้อยกว่า 7 — แก้ตัวเลขแล้วกด “สร้างใหม่”" })],
+  [/^Project_Master\.min_days_per_month is empty for project (.*?) —/, m => ({ w:`โครงการ “${m[1]}” ยังไม่ได้ตั้ง “จำนวนวันขั้นต่ำต่อเดือน”`, f:FIX_ADMIN })],
+  [/^Template (\S+) needs (\{\{\w+\}\}) but the workflow does not provide it/, m => ({ w:`ระบบยังไม่รองรับช่องข้อมูล ${m[2]} ที่แม่แบบ ${m[1]} ต้องใช้`, f:FIX_ADMIN })],
+  [/^Template (\S+) needs (\{\{\w+\}\}) but the value is empty/, m => ({ w:`แม่แบบ ${m[1]} ต้องใช้ข้อมูล ${m[2]} แต่ยังว่างอยู่`, f:"กรอกข้อมูลนี้ให้ครบในหน้า “รายชื่อสตรีมเมอร์” หรือในสัญญา แล้วกด “สร้างใหม่”" })],
+  [/^Template (\S+) needs (\{\{\w+\}\}) but the value is still a sample/, m => ({ w:`ข้อมูล ${m[2]} ยังเป็นค่าตัวอย่างในวงเล็บ (ยังไม่ได้ใส่ข้อมูลจริง)`, f:"แทนที่ด้วยข้อมูลจริงแล้วกด “สร้างใหม่”" })],
+  [/^Interrupted: stuck at GENERATING/, () => ({ w:"การสร้างถูกขัดจังหวะกลางทาง (ระบบรีสตาร์ตหรือหยุดทำงานระหว่างสร้าง)", f:"ดูในโฟลเดอร์ 01_Drafts ว่ามีไฟล์ค้างครึ่ง ๆ กลาง ๆ ไหม จากนั้นกด “สร้างใหม่”" })],
+  [/^Unexpected error: Google API 404/, () => ({ w:"หาไฟล์ที่ต้องใช้ใน Google Drive ไม่เจอ (เช่น ไฟล์แม่แบบถูกลบหรือย้าย)", f:FIX_ADMIN })],
+  [/^Unexpected error: Google API (401|403)/, () => ({ w:"Google ไม่อนุญาตให้ระบบเข้าถึงไฟล์หรือชีต", f:"แจ้งผู้ดูแลระบบ — อาจต้องต่ออายุการเชื่อมต่อบัญชี Google หรือแชร์ไฟล์ให้บัญชีของระบบ" })],
+  [/^Unexpected error: Google API (429|5\d\d)/, () => ({ w:"Google ตอบสนองช้าหรือไม่ว่างชั่วคราว", f:"รอสักครู่แล้วกด “สร้างใหม่” อีกครั้ง" })],
+  [/^Unexpected error:/, () => ({ w:"ระบบเกิดข้อผิดพลาดระหว่างสร้างเอกสาร", f:"ลองกด “สร้างใหม่” อีกครั้ง ถ้ายังเหมือนเดิมให้ส่งรายละเอียดทางเทคนิคด้านล่างให้ผู้ดูแล" })],
+];
+function explainError(raw){
+  const seen = new Set(), out = [];
+  for (const part of String(raw ?? "").split(" | ").map(x => x.trim()).filter(Boolean)){
+    let hit = null;
+    for (const [re, fn] of ERR_RULES){ const m = re.exec(part); if (m){ hit = fn(m); break; } }
+    if (!hit) hit = { w:"ระบบแจ้งข้อผิดพลาดที่ยังไม่มีคำอธิบายภาษาไทย", f:"ลองกด “สร้างใหม่” อีกครั้ง ถ้ายังเหมือนเดิมให้ส่งรายละเอียดทางเทคนิคด้านล่างให้ผู้ดูแล" };
+    if (!seen.has(hit.w)){ seen.add(hit.w); out.push(hit); }
+  }
+  return out;
+}
+function errorHtml(raw){
+  if (blank(raw)) return "";
+  const li = explainError(raw).map(x => `<li>${esc(x.w)}<div class="fix">→ ${esc(x.f)}</div></li>`).join("");
+  return `<div class="msg bad errbox"><b>สร้างไม่สำเร็จเพราะ</b><ul>${li}</ul>` +
+         `<details><summary>รายละเอียดทางเทคนิค — ส่งให้ผู้ดูแลเมื่อต้องการความช่วยเหลือ</summary>${esc(raw)}</details></div>`;
+}
+
 function tbl(el, cols, rows, emptyMsg){
   if (!rows.length){ el.innerHTML = `<tbody><tr><td class="empty">${esc(emptyMsg)}</td></tr></tbody>`; return; }
   el.innerHTML = "<thead><tr>" + cols.map(c=>`<th class="${c.cls||""}">${esc(c.h)}</th>`).join("") + "</tr></thead><tbody>" +
@@ -3089,7 +3160,7 @@ const LIST_COLS = [
       const st = RES_STATE[up(r.status)] || { pill:"flat", label:r.status || "รอส่งขึ้นชีต" };
       const req = up(r.generation_requested)==="YES" ? ' <span class="pill mid">สั่งสร้างแล้ว</span>' : "";
       return `<span class="pill ${st.pill}">${esc(st.label)}</span>${req}` +
-             (blank(r.error_message) ? "" : `<div class="msg bad">${esc(r.error_message)}</div>`);
+             (blank(r.error_message) ? "" : `${errorHtml(r.error_message)}`);
     } },
   { h:"", cls:"wrap-cell", f:r=>{
       const files = [[r.draft_file_url_contract_nda,"สัญญา"],[r.draft_file_url_mou,"MOU"],[r.signed_file_url,"ฉบับเซ็น"]]
@@ -3228,7 +3299,7 @@ function renderResults(){
       <div class="who">${esc(r.streamer_name || r.streamer_id)}
         <span class="mono">${esc(r.contract_id)}</span></div>
       <div class="when">${esc((r.generated_at || r.updated_at || "").slice(0,16))}</div>
-      ${blank(r.error_message) ? "" : `<div class="msg bad">${esc(r.error_message)}</div>`}
+      ${blank(r.error_message) ? "" : `${errorHtml(r.error_message)}`}
       ${files.length || canEdit ? `<div class="files">${files.map(([u,l]) =>
         `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join("")}${
         canEdit ? `<button class="sm" data-editrow="${esc(r.contract_id)}" type="button">แก้ข้อมูล</button>
@@ -3356,23 +3427,23 @@ function renderArchive(){
 
 /** บอกงานชิ้นเดียวที่ควรทำต่อ เรียงตามความเร่งด่วนจริง */
 function renderNextUp(ctx){
-  const go = p => `<button class="primary" data-goto="${p}" type="button">ไปที่นั่น</button>`;
+  const go = (p, label = "ไปที่นั่น") => `<button class="primary" data-goto="${p}" type="button">${label}</button>`;
   let c;
   if (ctx.errors)
     c = { t:"hot",  i:"⚠", b:`มีสัญญาสร้างไม่สำเร็จ ${ctx.errors} ฉบับ`,
-          w:"ดูเหตุผลในรายการด้านล่าง แก้ข้อมูลในชีตแล้วตั้ง generation_requested = YES ใหม่", a:"" };
+          w:"ดูสาเหตุและวิธีแก้ในรายการด้านล่าง แก้ข้อมูลแล้วกด “สร้างใหม่” ที่สัญญานั้น", a:"" };
   else if (ctx.failing)
     c = { t:"hot",  i:"⚠", b:`มี ${ctx.failing} สัญญาที่ข้อมูลยังไม่ครบ`,
-          w:"ระบบจะตีกลับถ้าปล่อยไว้ — ตรวจว่าขาดอะไร", a:go("check") };
+          w:"ถ้าปล่อยไว้ สัญญาเหล่านี้จะสร้างไม่สำเร็จ — ไปดูว่าขาดข้อมูลอะไร", a:go("preflight", "ดูว่าขาดอะไร") };
   else if (DB.pending.length)
     c = { t:"hot",  i:"↑", b:`มี ${DB.pending.length} สัญญาค้างอยู่ ยังไม่ขึ้นชีต`,
-          w:"ครั้งก่อนส่งไม่สำเร็จ — กดส่งซ้ำ ไม่งั้นระบบจะไม่เห็นสัญญาชุดนี้", a:go("push") };
+          w:"ครั้งก่อนส่งไม่สำเร็จ — กดส่งซ้ำ ไม่งั้นระบบจะไม่เห็นสัญญาชุดนี้", a:go("pending", "ส่งซ้ำ") };
   else if (!DB.streamers.length)
     c = { t:"",     i:"+", b:"เริ่มด้วยการเพิ่มสตรีมเมอร์",
-          w:"กรอกข้อมูลคนที่จะทำสัญญาก่อน แล้วค่อยสร้างรอบสัญญา", a:go("streamers") };
+          w:"กรอกข้อมูลคนที่จะทำสัญญาก่อน แล้วค่อยสร้างรอบสัญญา", a:go("streamers-add", "เพิ่มสตรีมเมอร์") };
   else if (ctx.exp7)
     c = { t:"hot",  i:"⏳", b:`มี ${ctx.exp7} สัญญาหมดอายุใน 7 วัน`,
-          w:"ควรติดต่อเรื่องต่อสัญญาวันนี้", a:go("check") };
+          w:"ควรติดต่อเรื่องต่อสัญญาวันนี้", a:go("renew", "ดูรายการ") };
   else if (ctx.requested)
     // ตัดตัวจับเวลาของ n8n ออกไปแล้ว ไม่มีอะไรมาหยิบไปทำให้เองอีกต่อไป
     // ต้องกดสั่งเองเท่านั้น ไม่งั้นแถวจะค้างเป็น YES เฉย ๆ ไม่ถูกสร้างจนกว่าจะมีคนกด
@@ -3384,7 +3455,7 @@ function renderNextUp(ctx){
           a:`<button class="primary" id="nextupRun" type="button">สั่งสร้างเอกสารเลย</button>` };
   else
     c = { t:"calm", i:"✓", b:"ไม่มีงานค้าง",
-          w:"สร้างรอบสัญญาใหม่ได้เลยเมื่อพร้อม", a:go("batch") };
+          w:"สร้างรอบสัญญาใหม่ได้เลยเมื่อพร้อม", a:go("batch", "สร้างรอบสัญญา") };
 
   $("nextup").innerHTML = `<div class="nextup ${c.t}">
     <span class="ico">${c.i}</span>
@@ -3454,7 +3525,7 @@ function render(){
       { h:"", f:s=>`<button class="sm icon" data-edit="${esc(s.streamer_id)}" type="button" title="แก้ไข" aria-label="แก้ไข">✏️</button>
                     <button class="sm icon danger" data-del="${esc(s.streamer_id)}" type="button" title="ลบ" aria-label="ลบ">🗑️</button>` },
     ]),
-    { h:"ID", cls:"mono", f:s=>esc(s.streamer_id) },
+    { h:"รหัส", cls:"mono", f:s=>esc(s.streamer_id) },
     { h:"ชื่อในวงการ", f:s=>esc(s.streamer_name) },
     { h:"โปรเจกต์", f:s=>{
         const projs = String(s.project||"").split(",").map(x=>x.trim()).filter(Boolean);
@@ -3490,7 +3561,7 @@ function render(){
   /* ---- pending ---- */
   tbl($("tPending"), [
     { h:"Contract ID", cls:"mono", f:r=>esc(r.contract_id) },
-    { h:"Batch", cls:"mono", f:r=>esc(r.batch_id) },
+    { h:"รอบสัญญา", cls:"mono", f:r=>esc(r.batch_id) },
     { h:"สตรีมเมอร์", f:r=>esc(r.streamer_name) },
     { h:"ช่วงสัญญา", cls:"mono", f:r=>`${esc(fmtDMY(r.contract_start))} → ${esc(fmtDMY(r.contract_end))}` },
     { h:"ค่าจ้าง", cls:"num", f:r=>`${esc(r.fee)} ${esc(r.currency)}` },
@@ -3646,10 +3717,10 @@ function render(){
 
   $("tiles").innerHTML = [
     { l:"สตรีมเมอร์", v:DB.streamers.length, h:`Active ${DB.streamers.filter(s=>String(s.active_status).toLowerCase()==="active").length} คน`, c:"--s3", always:1, g:"streamers-list" },
-    { l:"ค้างส่ง", v:DB.pending.length, h:"ยังไม่ขึ้นชีต", c:"--accent", d:"pending" },
-    { l:"สั่ง generate", v:requested.length, h:"รอระบบทำงาน", c:"--s4", always:1, d:"requested" },
-    { l:"ติดปัญหา", v:failing.length, h:"ระบบจะตีกลับ", c:"--critical", d:"failing" },
-    { l:"สร้างไม่สำเร็จ", v:errCount, h:"ต้องแก้", c:"--serious", d:"err" },
+    { l:"ส่งขึ้นชีตไม่สำเร็จ", v:DB.pending.length, h:"ต้องกดส่งซ้ำ", c:"--accent", d:"pending" },
+    { l:"สั่งสร้างแล้ว", v:requested.length, h:"รอระบบสร้างเอกสาร", c:"--s4", always:1, d:"requested" },
+    { l:"ข้อมูลไม่ครบ", v:failing.length, h:"ต้องแก้ก่อนสร้าง", c:"--critical", d:"failing" },
+    { l:"สร้างไม่สำเร็จ", v:errCount, h:"ดูสาเหตุด้านล่าง", c:"--serious", d:"err" },
     { l:"รอลายเซ็น", v:waitSign, h:"ส่งให้เซ็นแล้ว", c:"--s5", d:"waitSign" },
     { l:"หมดอายุใน 7 วัน", v:exp7, h:"ต้องเตือนวันนี้", c:"--warning", d:"exp7" },
   ].filter(t=>t.always||t.v).map(t=>{
@@ -3712,7 +3783,7 @@ function render(){
   // ปุ่มสั่งงานโผล่เฉพาะเมื่อตั้ง webhook แล้ว ไม่งั้นกดไปก็พังอย่างเดียว
   $("runBtn").style.display = blank(DB.cfg.hook) ? "none" : "";
   $("srcInfo").textContent = DB.sheet.fetchedAt
-    ? `ข้อมูลชีตจาก${DB.sheet.source} · ${DB.sheet.fetchedAt}` : "ยังไม่มีข้อมูลจากชีต";
+    ? `ข้อมูลชีตจาก ${DB.sheet.source} · ${DB.sheet.fetchedAt}` : "ยังไม่มีข้อมูลจากชีต";
   $("loadedChips").innerHTML = [
     ["Contract_Tracker", DB.sheet.tracker.length],
     ["Streamer_Master", DB.streamers.length],
