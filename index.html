@@ -461,7 +461,7 @@
         <h2 style="margin:0">สตรีมเมอร์และสถานะสัญญา</h2>
         <span class="hint">เรียงตามวันเริ่มสัญญา เก่าสุดอยู่บน</span>
       </div>
-      <input type="search" id="dbSearch" placeholder="ค้นหา ชื่อช่อง · ชื่อจริง · ลิงก์ · สถานะ (เช่น Active, ใกล้หมดสัญญา)" autocomplete="off" aria-label="ค้นหาสตรีมเมอร์และสัญญา" style="width:100%; box-sizing:border-box; margin-bottom:10px">
+      <input type="search" id="dbSearch" placeholder="ค้นหา ชื่อช่อง · ชื่อจริง · ลิงก์ · สถานะ (เช่น Active, Expiring Soon)" autocomplete="off" aria-label="ค้นหาสตรีมเมอร์และสัญญา" style="width:100%; box-sizing:border-box; margin-bottom:10px">
       <div class="dbTabs" id="dbTabs" role="tablist"></div>
       <div class="scroll"><table id="tDash"></table></div>
       <div class="row" id="dbPager" style="margin-top:12px; justify-content:center; display:none">
@@ -3678,8 +3678,8 @@ const DASH_TABS = [
 const DASH_EXPIRING_DAYS = 30;   // เกณฑ์เดียวกับหน้า "ต่ออายุสัญญา"
 const DASH_STATES = {
   active:     { label:"Active",           pill:"ok" },
-  expiring:   { label:"ใกล้หมดสัญญา",     pill:"action" },
-  expired:    { label:"หมดสัญญา",         pill:"flat" },
+  expiring:   { label:"Expiring Soon",    pill:"action", alias:"ใกล้หมดสัญญา" },
+  expired:    { label:"Expired",          pill:"flat",   alias:"หมดสัญญา" },
   terminated: { label:"Terminated",       pill:"no" },
   upcoming:   { label:"ยังไม่เริ่ม",       pill:"mid" },
   progress:   { label:"ระหว่างดำเนินการ", pill:"mid" },
@@ -3724,7 +3724,7 @@ function dashBuildMap(){
 function dashHay(it){
   const { r, s, st } = it;
   return [s.channel_name, r.streamer_name, r.streamer_id, s.channel_url, s.legal_name_th, s.legal_name,
-          DASH_STATES[st].label, st, r.status, r.contract_id, r.project].map(x => String(x ?? "")).join(" ").toLowerCase();
+          DASH_STATES[st].label, DASH_STATES[st].alias, st, r.status, r.contract_id, r.project]   // alias = คำไทยเดิม ค้นด้วยคำไทยก็ยังเจอ.map(x => String(x ?? "")).join(" ").toLowerCase();
 }
 function dashItems(){
   const startKey = r => DATE_RE.test(String(r.contract_start || "")) ? r.contract_start : "9999-99-99";
