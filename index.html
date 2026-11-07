@@ -3986,7 +3986,7 @@ function dashBuildMap(){
 function dashHay(it){
   const { r, s, st } = it;
   return [s.channel_name, r.streamer_name, r.streamer_id, s.channel_url, s.legal_name_th, s.legal_name,
-          DASH_STATES[st].label, DASH_STATES[st].alias, st, r.status, r.contract_id, r.project]   // alias = คำไทยเดิม ค้นด้วยคำไทยก็ยังเจอ.map(x => String(x ?? "")).join(" ").toLowerCase();
+          DASH_STATES[st].label, DASH_STATES[st].alias, st, r.status, r.contract_id, r.project].map(x => String(x ?? "")).join(" ").toLowerCase();
 }
 function dashItems(){
   const startKey = r => DATE_RE.test(String(r.contract_start || "")) ? r.contract_start : "9999-99-99";
