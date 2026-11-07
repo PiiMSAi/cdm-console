@@ -2101,7 +2101,10 @@ function profileErrorsFor(s, need){
   }
   if (need.has("NATIONAL_ID")){
     const nid = String(s.national_id || "").replace(/[\s-]/g, "");
-    if (!(nid.includes("*") ? Number(s.national_id_digits) === 13 : /^\d{13}$/.test(nid)))     // ค่าปิดบังจากระบบใหม่: ตรวจความยาวจาก national_id_digits
+    /* ค่าปิดบังจากระบบใหม่: ตรวจความยาวจาก national_id_digits — รายชื่อในเครื่อง (DB.streamers) ไม่เก็บช่องนี้
+       (เก็บเฉพาะ STREAMER_COLS) จึงต้องไปหาจากข้อมูลล่าสุดที่ดึงมาจากระบบ (DB.sheet.streamers) */
+    const digits = s.national_id_digits ?? (DB.sheet.streamers || []).find(x => String(x.streamer_id) === String(s.streamer_id))?.national_id_digits;
+    if (!(nid.includes("*") ? Number(digits) === 13 : /^\d{13}$/.test(nid)))
       e.push(nid === "" ? "ชุดเอกสารนี้ต้องใช้เลขบัตรประชาชน"
                         : "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก");
   }
