@@ -897,7 +897,8 @@
       <div class="row" style="margin-top:12px">
         <button class="primary" id="editSave" type="button">บันทึกลงชีต</button>
         <button id="editCancel" type="button">ยกเลิก</button>
-        <button class="danger" id="editDelete" type="button" style="margin-left:auto">ลบสัญญานี้</button>
+        <button class="danger" id="editTerminate" type="button" style="margin-left:auto" title="ตั้งสถานะสัญญานี้เป็น Terminated (ไม่ลบไฟล์)">ยกเลิกสัญญา (Terminate)</button>
+        <button class="danger" id="editDelete" type="button">ลบสัญญานี้</button>
         <span class="hint" id="editMsg"></span>
       </div>
     </div>
@@ -3371,12 +3372,47 @@ function openEdit(cid){
   $("e_end").value    = r.contract_end || "";
   syncDateTexts($("editModal"));
   $("editMsg").textContent = "";
+  $("editTerminate").style.display = canTerminate(r) ? "" : "none";     // ยกเลิกไปแล้ว/หมดอายุ/ยังเป็นร่าง ไม่ต้องมีปุ่ม
   $("editModal").classList.add("on");
 }
 const closeEdit = () => { $("editModal").classList.remove("on"); editingContract = null; };
 $("editClose").addEventListener("click", closeEdit);
 $("editCancel").addEventListener("click", closeEdit);
 $("editDelete").addEventListener("click", () => { const id = editingContract; closeEdit(); deleteContract(id); });
+$("editTerminate").addEventListener("click", () => { const id = editingContract; closeEdit(); terminateContract(id); });
+
+/* ── ยกเลิกสัญญา (Terminate) ──
+   ตั้งสถานะ CANCELLED (+ generation_requested = NO กันระบบสร้างเอกสารซ้ำ) แล้วแดชบอร์ดจะขึ้น Terminated
+   ไม่ลบแถวและไม่แตะไฟล์ใน Drive — ย้อนกลับได้โดยแก้สถานะในชีตกลับ ต่างจาก "ลบสัญญานี้" ที่ลบแถวและย้ายไฟล์ลงถังขยะ
+   ยกเลิกได้เฉพาะสัญญาที่มีผลหรืออยู่ในขั้นหลังสร้างแล้ว (ร่าง/ผิดพลาดให้ลบแทน, ยกเลิก/หมดอายุแล้วไม่ต้องทำซ้ำ) */
+const TERMINABLE_STATUS = ["GENERATED","SIGNED","QA_PENDING","QA_PASSED","QA_FAILED","PENDING_APPROVAL","APPROVED","SENDING","SENT","VIEWED","PARTIALLY_SIGNED"];
+const canTerminate = r => TERMINABLE_STATUS.includes(up(r.status)) && !["expired","terminated"].includes(dashState(r));
+async function terminateContract(cid){
+  if (isViewer()){ toast("บัญชีผู้เยี่ยมชมดูข้อมูลได้อย่างเดียว","bad"); return; }
+  const r = DB.sheet.tracker.find(x => String(x.contract_id) === String(cid));
+  if (!r) return;
+  if (!canTerminate(r)){ toast("สัญญานี้ยกเลิกไม่ได้ (ยกเลิกแล้ว หมดอายุแล้ว หรือยังไม่ใช่สัญญาที่มีผล)","bad"); return; }
+  const who = r.streamer_name || r.streamer_id || "";
+  const ok = await ask({
+    title: "ยืนยันยกเลิกสัญญา", danger: true, yes: "ยืนยัน ยกเลิกสัญญานี้", no: "ไม่ยกเลิก",
+    html: `<b>${esc(who)}</b> · <span class="mono">${esc(r.contract_id)}</span>` +
+      `<dl>
+         <dt>โครงการ</dt><dd>${esc(r.project || "—")}</dd>
+         <dt>ช่วงสัญญา</dt><dd>${esc(fmtDMY(r.contract_start) || "—")} ถึง ${esc(fmtDMY(r.contract_end) || "—")}</dd>
+       </dl>` +
+      `<div class="note">สถานะจะเปลี่ยนเป็น <b>Terminated</b> และสัญญานี้จะหลุดจากรายการต่ออายุ ` +
+      `ไฟล์สัญญาใน Drive ไม่ถูกลบ · ถ้ากดผิด แก้สถานะในชีตกลับได้</div>`,
+  });
+  if (!ok) return;
+  const patch = { contract_id: r.contract_id, status: "CANCELLED", generation_requested: "NO" };
+  try{
+    await updateSheetRows("Contract_Tracker", "contract_id", [patch]);
+    Object.assign(r, patch); save(); render();
+    toast(`ยกเลิกสัญญา ${r.contract_id} แล้ว — สถานะ Terminated`, "ok");
+  } catch(err){
+    toast("ยกเลิกสัญญาไม่สำเร็จ: " + err.message, "bad");
+  }
+}
 $("editModal").addEventListener("click", e => { if (e.target === $("editModal")) closeEdit(); });
 
 $("editSave").addEventListener("click", async () => {
@@ -3419,6 +3455,8 @@ const RES_STATE = {
   SENT:             { pill:"mid",  label:"ส่งให้เซ็นแล้ว" },
   SIGNED:           { pill:"ok",   label:"เซ็นแล้ว" },
   GENERATING:       { pill:"flat", label:"กำลังสร้าง" },
+  CANCELLED:        { pill:"no",   label:"Terminated" },    // ตรงกับป้ายในแดชบอร์ด
+  DECLINED:         { pill:"no",   label:"Terminated" },
 };
 
 function renderResults(){
@@ -3768,6 +3806,11 @@ function renderDash(){
     { h:"สถานะสัญญา", f:it => `<span class="pill ${DASH_STATES[it.st].pill}" title="${esc(dashStateTip(it.r, it.st))}">${esc(DASH_STATES[it.st].label)}</span>` },
     { h:"วันเริ่มสัญญา", cls:"mono", f:it => esc(fmtDMY(it.r.contract_start) || "—") },
     { h:"วันหมดสัญญา",  cls:"mono", f:it => esc(fmtDMY(it.r.contract_end) || "—") },
+    // ปุ่มยกเลิกสัญญา: เฉพาะผู้ดูแลที่เชื่อมชีตแล้ว และเฉพาะสัญญาที่ยกเลิกได้ (Active / Expiring Soon)
+    ...((cfgReady() && !isViewer()) ? [
+      { h:"", f:it => canTerminate(it.r)
+          ? `<button class="sm danger" type="button" data-term="${esc(it.r.contract_id)}" title="ตั้งสถานะสัญญานี้เป็น Terminated">ยกเลิกสัญญา</button>` : "" },
+    ] : []),
   ], slice, searching ? `ไม่พบสัญญาที่ตรงกับ “${dashQ.trim()}”`
           : (DB.sheet.tracker || []).length ? "ยังไม่มีสัญญาในกลุ่มนี้" : "ยังไม่มีข้อมูล — กด “ดึงข้อมูลจากชีต”");
   $("dbInfo").textContent = `หน้า ${dashPage}/${pages} · ${searching ? "พบ" : "ทั้งหมด"} ${rows.length} สัญญา`;
@@ -3778,6 +3821,9 @@ function renderDash(){
 $("dbTabs").addEventListener("click", e => {
   const b = e.target.closest("[data-dbtab]"); if (!b) return;
   dashTab = b.dataset.dbtab; dashPage = 1; renderDash();
+});
+$("tDash").addEventListener("click", e => {
+  const b = e.target.closest("[data-term]"); if (b) terminateContract(b.dataset.term);
 });
 $("dbSearch").addEventListener("input", e => { dashQ = e.target.value; dashPage = 1; renderDash(); });
 $("dbPrev").addEventListener("click", () => { dashPage--; renderDash(); });
