@@ -1107,18 +1107,43 @@ async function apiLogin(email, pw){
   if (!CDM_CFG.supabaseUrl || !CDM_CFG.supabaseAnonKey || !CDM_CFG.apiBase) { errEl.textContent = "ยังไม่ได้ตั้งค่าการเชื่อมต่อระบบ (CDM_CONFIG)"; return; }
   errEl.textContent = "กำลังตรวจสอบ...";
   try {
-    const t = await supabaseAuth("password", { email, password: pw });
-    setApiSession(Object.assign({}, t, { user: null }));
-    const me = await apiFetch("GET", "/me");            // บทบาทมาจากฐานข้อมูลฝั่งเซิร์ฟเวอร์ ไม่ใช่จาก token
-    setApiSession(Object.assign({}, t, { user: me.user }));
-    setLocked(false); applyRoleUI();
+    await completeLogin(await supabaseAuth("password", { email, password: pw }));
     pwEl.value = ""; errEl.textContent = "";
-    if (typeof renderApiUser === "function") renderApiUser();
-    if (typeof pullFromSheet === "function") pullFromSheet(true);
   } catch (e) {
     setApiSession(null);
     errEl.textContent = e.message;
   }
+}
+/** ขั้นหลังได้ token จาก Supabase (ล็อกอินด้วยรหัสผ่านหรือ Google): ถามเซิร์ฟเวอร์ว่าบัญชีนี้มีสิทธิ์ไหม แล้วค่อยปลดล็อกหน้าจอ */
+async function completeLogin(t){
+  setApiSession(Object.assign({}, t, { user: null }));
+  const me = await apiFetch("GET", "/me");            // บทบาทมาจากฐานข้อมูลฝั่งเซิร์ฟเวอร์ ไม่ใช่จาก token
+  setApiSession(Object.assign({}, t, { user: me.user }));
+  setLocked(false); applyRoleUI();
+  if (typeof renderApiUser === "function") renderApiUser();
+  if (typeof pullFromSheet === "function") pullFromSheet(true);
+}
+/** เข้าสู่ระบบด้วย Google: ส่งไปหน้าล็อกอินของ Supabase แล้วกลับมาที่หน้านี้พร้อม token ในส่วน # ของ URL (ต้องเพิ่ม URL ของหน้านี้ใน Redirect URLs ของ Supabase) */
+function googleLogin(){
+  if (!CDM_CFG.supabaseUrl) { document.getElementById("gateErr").textContent = "ยังไม่ได้ตั้งค่าการเชื่อมต่อระบบ (CDM_CONFIG)"; return; }
+  location.href = `${CDM_CFG.supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(location.origin + location.pathname)}`;
+}
+/** กลับมาจาก Google: อ่าน token จาก # (แล้วลบออกจาก URL ทันที) หรือแสดงข้อความถ้าล็อกอินไม่สำเร็จ */
+async function handleOAuthReturn(){
+  const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+  if (!h.get("access_token") && !h.get("error")) return false;
+  history.replaceState(null, "", location.pathname + location.search);     // ไม่ให้ token ค้างในแถบที่อยู่/ประวัติ
+  const errEl = document.getElementById("gateErr");
+  if (h.get("error")) { errEl.textContent = "เข้าสู่ระบบด้วย Google ไม่สำเร็จ" + (h.get("error_description") ? ` (${h.get("error_description").slice(0, 120)})` : ""); return true; }
+  errEl.textContent = "กำลังตรวจสอบ...";
+  try {
+    await completeLogin({ access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_at: Date.now() + (Number(h.get("expires_in")) || 3600) * 1000 });
+    errEl.textContent = "";
+  } catch (e) {
+    setApiSession(null);
+    errEl.textContent = e.status === 403 ? "บัญชี Google นี้ยังไม่ได้รับสิทธิ์ใช้งานระบบสัญญา (ให้ผู้ดูแลเพิ่มสิทธิ์ให้)" : e.message;
+  }
+  return true;
 }
 
 /* ══════════ เข้าสู่ระบบก่อนเข้าคอนโซล (ID + รหัสผ่าน) ══════════
@@ -3170,6 +3195,12 @@ if (API_MODE) {
   renderApiUser();
   document.getElementById("apiLogoutBtn").addEventListener("click", () => { apiSignOut(); location.reload(); });
   document.getElementById("apiPwBtn").addEventListener("click", () => changePassword());
+  // ปุ่มเข้าสู่ระบบด้วย Google (โหมดใหม่เท่านั้น) ใต้ปุ่มเข้าสู่ระบบด้วย ID/รหัสผ่าน
+  const gg = document.createElement("button");
+  gg.type = "button"; gg.id = "gateGoogle"; gg.textContent = "เข้าสู่ระบบด้วย Google"; gg.style.cssText = "width:100%; margin-top:8px";
+  document.getElementById("gateGo").after(gg);
+  gg.addEventListener("click", googleLogin);
+  handleOAuthReturn();     // ถ้าเพิ่งกลับมาจากหน้า Google (มี token ใน #) จะล็อกอินให้เอง
   // มี session ค้างอยู่ -> ยืนยันกับเซิร์ฟเวอร์ว่ายังใช้ได้และอัปเดตชื่อ/บทบาทล่าสุด (ถ้าใช้ไม่ได้ ระบบจะพากลับหน้าล็อกอินเอง)
   if (apiSession()) {
     apiFetch("GET", "/me").then(r => { const s = apiSession(); if (s) { s.user = r.user; setApiSession(s); } applyRoleUI(); renderApiUser(); }).catch(() => {});
