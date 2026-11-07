@@ -121,42 +121,44 @@
   #tDash .dbLink, #tDash .dbCut{display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
   #tDash .dbTerm{padding:2px 8px; font-size:12px}
   /* ป๊อปอัปสถานะการสร้างสัญญา — ลอยมุมขวาล่าง (อยู่ใน .toasts จึงซ้อนใต้ข้อความแจ้งเตือน) เห็นได้ทุกหน้า */
-  #batchRun{pointer-events:auto; width:min(340px,calc(100vw - 32px)); box-sizing:border-box; background:var(--surface); color:var(--ink);
+  .runbox{pointer-events:auto; width:min(340px,calc(100vw - 32px)); box-sizing:border-box; background:var(--surface); color:var(--ink);
     border:1px solid var(--ring); border-left:3px solid var(--accent); border-radius:12px; padding:12px 14px;
     box-shadow:0 10px 32px rgba(0,0,0,.28); animation:brIn .24s cubic-bezier(.2,.9,.3,1.2)}
-  #batchRun[hidden]{display:none}
-  #batchRun.ok{border-left-color:var(--good)}
-  #batchRun.bad{border-left-color:var(--critical)}
-  #batchRun svg{width:1em; height:1em; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none}
-  #batchRun .brTop{display:flex; align-items:center; gap:10px}
-  #batchRun .brBadge{width:32px; height:32px; border-radius:50%; display:grid; place-items:center; flex:none; font-size:17px;
+  .runbox[hidden]{display:none}
+  .runbox.ok{border-left-color:var(--good)}
+  .runbox.bad{border-left-color:var(--critical)}
+  .runbox svg{width:1em; height:1em; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none}
+  .runbox .brTop{display:flex; align-items:center; gap:10px}
+  .runbox .brBadge{width:32px; height:32px; border-radius:50%; display:grid; place-items:center; flex:none; font-size:17px;
     color:var(--accent); background:color-mix(in srgb,var(--accent) 16%,transparent)}
-  #batchRun.ok .brBadge{color:var(--good-ink); background:color-mix(in srgb,var(--good) 18%,transparent)}
-  #batchRun.bad .brBadge{color:var(--critical-ink); background:color-mix(in srgb,var(--critical) 16%,transparent)}
-  #batchRun .brTxt{min-width:0; flex:1}
-  #batchRun .brTitle{font-weight:700; font-size:14px; line-height:1.3}
-  #batchRun .brSub{font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-  #batchRun .brX{margin-left:auto; flex:none; width:28px; height:28px; display:grid; place-items:center; padding:0; font-size:15px;
+  .runbox.ok .brBadge{color:var(--good-ink); background:color-mix(in srgb,var(--good) 18%,transparent)}
+  .runbox.bad .brBadge{color:var(--critical-ink); background:color-mix(in srgb,var(--critical) 16%,transparent)}
+  .runbox .brTxt{min-width:0; flex:1}
+  .runbox .brTitle{font-weight:700; font-size:14px; line-height:1.3}
+  .runbox .brSub{font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  .runbox .brX{margin-left:auto; flex:none; width:28px; height:28px; display:grid; place-items:center; padding:0; font-size:15px;
     border-radius:8px; border:1px solid var(--ring); background:transparent; color:var(--ink-2); cursor:pointer}
-  #batchRun .brX:hover{background:var(--plane); color:var(--ink)}
-  #batchRun .brBar{height:5px; border-radius:99px; background:var(--grid); overflow:hidden; margin:11px 0 0}
-  #batchRun .brBar i{display:block; height:100%; width:0; background:var(--accent); transition:width .4s}
-  #batchRun.ok .brBar i{background:var(--good)}
-  #batchRun.bad .brBar i{background:var(--critical)}
-  #batchRun .brSteps{display:flex; gap:4px 12px; flex-wrap:wrap; margin-top:10px; font-size:12px}
-  #batchRun .brSteps span{display:inline-flex; align-items:center; gap:5px; color:var(--muted)}
-  #batchRun .brSteps .done{color:var(--good-ink)}
-  #batchRun .brSteps .fail{color:var(--critical-ink)}
-  #batchRun .brSteps .now{color:var(--accent); font-weight:600}
-  #batchRun .brNote{margin-top:8px; font-size:12px; line-height:1.5; color:var(--ink-2)}
-  #batchRun .brFail{margin:8px 0 0; padding:0; list-style:none; font-size:12px; line-height:1.5; color:var(--critical-ink)}
-  #batchRun .brFail li{display:flex; gap:5px; align-items:baseline}
-  #batchRun .brGo{margin-top:10px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12.5px}
-  #batchRun .spin{animation:brSpin .9s linear infinite; transform-origin:50% 50%}
+  .runbox .brX:hover{background:var(--plane); color:var(--ink)}
+  .runbox .brBar{height:5px; border-radius:99px; background:var(--grid); overflow:hidden; margin:11px 0 0}
+  .runbox .brBar i{display:block; height:100%; width:0; background:var(--accent); transition:width .4s}
+  .runbox.ok .brBar i{background:var(--good)}
+  .runbox.bad .brBar i{background:var(--critical)}
+  .runbox .brSteps{display:flex; gap:4px 12px; flex-wrap:wrap; margin-top:10px; font-size:12px}
+  .runbox .brSteps span{display:inline-flex; align-items:center; gap:5px; color:var(--muted)}
+  .runbox .brSteps .done{color:var(--good-ink)}
+  .runbox .brSteps .fail{color:var(--critical-ink)}
+  .runbox .brSteps .now{color:var(--accent); font-weight:600}
+  .runbox .brNote{margin-top:8px; font-size:12px; line-height:1.5; color:var(--ink-2)}
+  .runbox .brFail{margin:8px 0 0; padding:0; list-style:none; font-size:12px; line-height:1.5; color:var(--critical-ink)}
+  .runbox .brFail li{display:flex; gap:5px; align-items:baseline}
+  .runbox .brGo{margin-top:10px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12.5px}
+  .runbox .brBar.ind i{width:40%; animation:brInd 1.2s ease-in-out infinite}
+  @keyframes brInd{0%{margin-left:-40%} 100%{margin-left:100%}}
+  .runbox .spin{animation:brSpin .9s linear infinite; transform-origin:50% 50%}
   @keyframes brIn{from{opacity:0; transform:translateY(14px) scale(.96)} to{opacity:1; transform:none}}
   @keyframes brSpin{to{transform:rotate(360deg)}}
-  @media (max-width:560px){ #batchRun{width:auto} }
-  @media (prefers-reduced-motion:reduce){ #batchRun,#batchRun .spin{animation:none} }
+  @media (max-width:560px){ .runbox{width:auto} }
+  @media (prefers-reduced-motion:reduce){ .runbox,.runbox .spin,.runbox .brBar.ind i{animation:none} }
 
   /* ══════════ sidebar ══════════ ซ้ายเป็นเมนู ขวาเป็นเนื้อหา — กว้างพอสมควรจะได้ไม่ต้องยุบ/ขยายกลุ่มเอง */
   .shell{display:flex; gap:26px; align-items:flex-start}
@@ -853,7 +855,7 @@
   </div>
 </div>
 
-<div class="toasts" id="toasts"><div id="batchRun" hidden role="status" aria-live="polite"></div></div>
+<div class="toasts" id="toasts"><div id="batchRun" class="runbox" hidden role="status" aria-live="polite"></div><div id="delRun" class="runbox" hidden role="status" aria-live="polite"></div></div>
 
 <!-- รายการที่เปิดจากการกดตัวเลขสรุป -->
 <div class="modal mid" id="askModal">
@@ -2183,6 +2185,60 @@ function batchRunPending(){
   const rows = batchRowsNow();
   return rows.length < batchRun.ids.length || rows.some(r => !brRowFinished(r));
 }
+const runIc = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+const RUN_IC = {
+  spin:  `<svg class="spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.55"/></svg>`,
+  check: runIc("M20 6 9 17l-5-5"),
+  x:     runIc("M18 6 6 18M6 6l12 12"),
+  warn:  runIc("M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"),
+  up:    runIc("M12 16V4m0 0-4 4m4-4 4 4M4 20h16"),
+  send:  runIc("M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"),
+  file:  runIc("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 13h6M9 17h6"),
+  home:  runIc("M3 11 12 3l9 8M5 10v10h14V10"),
+  trash: runIc("M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"),
+  rows:  runIc("M4 6h16M4 12h16M4 18h16"),
+};
+
+/* ══════════ กล่องสถานะการลบสัญญา ══════════
+   ลบแล้วเดิมมีแค่ข้อความเด้งสั้น ๆ ที่หายเอง — ลบหลายฉบับ/ไฟล์ใน Drive ใช้เวลา ผู้ใช้ไม่รู้ว่ายังทำอยู่หรือเสร็จแล้วและลบอะไรไปบ้าง
+   รูปแบบเดียวกับกล่องสถานะการสร้างสัญญา (.runbox): กำลังลบ → เสร็จ/ลบไม่สำเร็จ · ปิดได้เมื่อจบแล้วเท่านั้น
+   delRun = { n, stage: "deleting"|"done"|"fail", files, notFound, message } */
+let delRun = null;
+function renderDelRun(){
+  const el = $("delRun");
+  if (!delRun){ el.hidden = true; el.innerHTML = ""; return; }
+  const d = delRun, IC = RUN_IC;
+  const finished = d.stage !== "deleting";
+  const tone = d.stage === "done" ? "ok" : finished ? "bad" : "";
+  const noun = d.n === 1 ? "1 ฉบับ" : `${d.n} ฉบับ`;
+  const head = {
+    deleting: ["กำลังลบสัญญา", noun],
+    done:     ["ลบเสร็จแล้ว", `${noun} · ไฟล์ลงถังขยะ ${d.files}`],
+    fail:     ["ลบไม่สำเร็จ", noun],
+  }[d.stage];
+  const step = (cls, own, label) => `<span class="${cls}">${cls === "now" ? IC.spin : cls === "done" ? IC.check : cls === "fail" ? IC.x : own}${esc(label)}</span>`;
+  const sc = d.stage === "deleting" ? "now" : d.stage === "done" ? "done" : "fail";
+  const notes = [];
+  if (d.stage === "done"){
+    if (d.notFound) notes.push(`หาไฟล์ไม่เจอ ${d.notFound} รายการ (อาจถูกลบไปก่อนแล้ว)`);
+    notes.push("กู้ไฟล์คืนได้จากถังขยะของ Google Drive ภายใน 30 วัน");
+  } else if (d.stage === "fail") notes.push(d.message || "ไม่ทราบสาเหตุ");
+  el.className = "runbox " + tone;
+  el.innerHTML =
+    `<div class="brTop">
+       <span class="brBadge">${!finished ? IC.spin : tone === "ok" ? IC.check : IC.warn}</span>
+       <div class="brTxt"><div class="brTitle">${esc(head[0])}</div><div class="brSub">${esc(head[1])}</div></div>` +
+       (finished ? `<button class="brX" type="button" data-dr="close" aria-label="ปิด" title="ปิด">${IC.x}</button>` : "") +
+    `</div>` +
+    `<div class="brBar ${finished ? "" : "ind"}"><i style="width:${finished ? 100 : 40}%"></i></div>` +
+    `<div class="brSteps">${step(sc, IC.trash, "ย้ายไฟล์ลงถังขยะ")}${step(sc, IC.rows, "ลบข้อมูลสัญญา")}</div>` +
+    notes.map(t => `<div class="brNote">${esc(t)}</div>`).join("");
+  el.hidden = false;
+}
+$("delRun").addEventListener("click", e => {
+  if (e.target.closest("[data-dr=close]")){ delRun = null; renderDelRun(); }
+});
+
 function renderBatchRun(){
   const el = $("batchRun");
   if (!batchRun){ el.hidden = true; el.innerHTML = ""; return; }
@@ -2191,17 +2247,7 @@ function renderBatchRun(){
   const fin = rows.filter(brRowFinished), bad = fin.filter(brRowFailed);
   const allDone = b.stage === "generating" && rows.length === n && fin.length === n;
   const stageNow = allDone ? (bad.length ? "doneBad" : "done") : (b.timedOut && b.stage === "generating" ? "timeout" : b.stage);
-  const ic = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
-  const IC = {
-    spin:  `<svg class="spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.55"/></svg>`,
-    check: ic("M20 6 9 17l-5-5"),
-    x:     ic("M18 6 6 18M6 6l12 12"),
-    warn:  ic("M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"),
-    up:    ic("M12 16V4m0 0-4 4m4-4 4 4M4 20h16"),
-    send:  ic("M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"),
-    file:  ic("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 13h6M9 17h6"),
-    home:  ic("M3 11 12 3l9 8M5 10v10h14V10"),
-  };
+  const IC = RUN_IC;
   // ขั้นตอน: ไอคอนตามสถานะ (กำลังทำ=หมุน, เสร็จ=ติ๊ก, พัง=กากบาท, ยังไม่ถึง=ไอคอนของขั้นนั้น) + ป้ายสั้น ๆ
   const step = (cls, own, label) => `<span class="${cls}">${cls === "now" ? IC.spin : cls === "done" ? IC.check : cls === "fail" ? IC.x : own}${esc(label)}</span>`;
   const c1 = b.stage === "sending" ? "now" : b.stage === "pushfail" ? "fail" : "done";
@@ -2233,7 +2279,7 @@ function renderBatchRun(){
     ? `<ul class="brFail">${bad.map(r =>
         `<li>${IC.x}<span>${esc(r.streamer_name || r.contract_id)} — ${esc((explainError(r.error_message)[0] || {}).w || "สร้างไม่สำเร็จ")}</span></li>`).join("")}</ul>`
     : "";
-  el.className = tone;
+  el.className = "runbox " + tone;
   el.innerHTML =
     `<div class="brTop">
        <span class="brBadge">${!finished ? IC.spin : tone === "ok" ? IC.check : IC.warn}</span>
@@ -2588,6 +2634,7 @@ async function bulkDeleteContracts(ids){
       (signedCount ? `<div class="note">${one ? "สัญญานี้เซ็นแล้ว" : `มี ${signedCount} ฉบับที่เซ็นแล้ว`} การลบทิ้งอาจมีผลทางกฎหมาย</div>` : ""),
   })) return;
 
+  delRun = { n: rows.length, stage: "deleting" }; renderDelRun();      // กล่องสถานะลอยมุมจอ (เห็นทุกหน้า)
   try{
     const out = await callScript({ action:"deleteContract", contractIds: rows.map(r => r.contract_id) });
     if (!out.ok) throw new Error(out.error || "ไม่ทราบสาเหตุ");
@@ -2595,9 +2642,8 @@ async function bulkDeleteContracts(ids){
     DB.sheet.tracker = DB.sheet.tracker.filter(r => !doneIds.has(r.contract_id));
     doneIds.forEach(id => pickedContracts.delete(id));
     save(); render(); closeList();
-    toast(`ลบ${one ? " " + one.contract_id : ` ${rows.length} สัญญา`}แล้ว — ไฟล์ลงถังขยะ ${out.filesTrashed} รายการ` +
-      (out.notFound && out.notFound.length ? `\nหาไฟล์ไม่เจอ ${out.notFound.length} รายการ (อาจถูกลบไปก่อนแล้ว)` : ""), "ok");
-  } catch(err){ toast("ลบไม่สำเร็จ: " + err.message, "bad"); }
+    delRun = { n: rows.length, stage: "done", files: out.filesTrashed || 0, notFound: (out.notFound && out.notFound.length) || 0 }; renderDelRun();
+  } catch(err){ delRun = { n: rows.length, stage: "fail", message: err.message }; renderDelRun(); }
 }
 /** ปุ่มลบรายตัวเดิมยังเรียกชื่อนี้อยู่หลายจุด — ให้ใช้เส้นทางเดียวกับการลบหลายรายการ */
 async function deleteContract(contractId){ return bulkDeleteContracts([contractId]); }
