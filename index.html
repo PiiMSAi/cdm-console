@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CDM Contract Console</title>
+<!-- วันสลับ: บรรทัดนี้คือสวิตช์เปิดโหมดใหม่ (REST API บน Railway + Supabase Auth) — ถอนบรรทัดนี้ออก = กลับไปโหมดเดิม (Worker + Apps Script + ชีต) ด้วยไฟล์เดียวกัน
+     ค่าทั้งหมดเป็นค่าสาธารณะ (ที่อยู่ API, ที่อยู่โปรเจกต์ Supabase, publishable key) ไม่มีความลับ — ดู docs/CUTOVER.md ในโปรเจกต์ cdm-contract-system -->
+<script>window.CDM_CONFIG = { backend: "api", apiBase: "https://cdm-contract-system-production.up.railway.app", supabaseUrl: "https://paocpduerqmvnkzlqvrr.supabase.co", supabaseAnonKey: "sb_publishable_5iQSldH62M7YjVvcql0I9A_CjboHgwp", idDomain: "cdm-console.local" };</script>
 <style>
   :root{
     color-scheme: light;
@@ -405,6 +408,8 @@
   .errbox .fix{color:var(--ink-2)}
   .errbox details{margin-top:4px; font-size:12px; color:var(--ink-2); word-break:break-word}
   .errbox summary{cursor:pointer}
+  /* โหมด api: ซ่อนการ์ดที่ใช้เฉพาะระบบเดิม */
+  .api-mode .legacy-only{display:none !important}
 </style>
 </head>
 <body>
@@ -432,6 +437,9 @@
       <button class="primary admin-only" id="runBtn" type="button" style="display:none" title="ให้ระบบสร้างไฟล์สัญญาจากรายการที่สั่งสร้างไว้ (ปกติระบบสั่งให้เองหลังกด สร้างและส่งขึ้นชีต)">สั่งสร้างเอกสาร</button>
       <button id="pullBtn" type="button" title="โหลดข้อมูลล่าสุดจาก Google Sheet — กดเมื่ออยากเห็นผลใหม่ทันที">ดึงข้อมูลจากชีต</button>
       <button id="themeBtn" type="button" title="สลับระหว่างหน้าจอสีมืดและสีสว่าง">สลับโหมด</button>
+      <span id="userChip" class="hint" style="display:none"></span>
+      <button id="apiPwBtn" type="button" style="display:none" title="เปลี่ยนรหัสผ่านของบัญชีนี้">เปลี่ยนรหัสผ่าน</button>
+      <button id="apiLogoutBtn" type="button" style="display:none" title="ออกจากระบบและล้างข้อมูลที่แคชไว้ในเครื่องนี้">ออกจากระบบ</button>
     </div>
   </header>
 
@@ -943,6 +951,204 @@ if (!String(DB.cfg.url || "").trim() && String(DEFAULT_CFG.url || "").trim()) DB
 if (!String(DB.cfg.secret || "").trim() && String(DEFAULT_CFG.secret || "").trim()) DB.cfg.secret = DEFAULT_CFG.secret;
 const save = () => localStorage.setItem(KEY, JSON.stringify(DB));
 
+/* ══════════ โหมดหลังบ้าน ══════════
+   "legacy" = Cloudflare Worker + Apps Script + รหัสผ่านร่วม (ระบบเดิม ค่าเริ่มต้น — ไม่เปลี่ยนอะไรเลย)
+   "api"    = REST API บน Railway + Supabase Auth (ระบบใหม่ — เปิดตอนสลับด้วยการตั้ง window.CDM_CONFIG.backend = "api")
+
+   ในโหมด api: ทุกจุดที่เดิมเรียก callScript() (คำสั่ง read/write/update/deleteContract/...) ถูกแปลเป็น REST ที่ชั้นเดียวด้านล่าง
+   แล้วคืนผลในรูปเดิม โค้ดส่วนที่เหลือของคอนโซลจึงไม่ต้องรู้ว่าหลังบ้านเปลี่ยน
+   - การเข้าสู่ระบบ: อีเมล + รหัสผ่านรายคน (Supabase Auth) บทบาท admin/viewer ตัดสินที่ฝั่งเซิร์ฟเวอร์ ไม่ใช่ที่หน้านี้
+   - token เก็บใน localStorage ของเครื่องนี้ (เหมือนที่ supabase-js ทำ) และต่ออายุเอง; ออกจากระบบแล้วล้างข้อมูลที่แคชไว้
+   - anon key ของ Supabase เป็นคีย์สาธารณะโดยออกแบบ (ปลอดภัยเพราะข้อมูลจริงไม่อยู่ฝั่ง Supabase ที่เบราว์เซอร์เรียกได้ — ต้องผ่าน API ของเรา) */
+const CDM_CFG = Object.assign({ backend: "legacy", apiBase: "", supabaseUrl: "", supabaseAnonKey: "" }, window.CDM_CONFIG || {});
+const API_MODE = CDM_CFG.backend === "api";
+const API_SESSION_KEY = "cdm-api-session-v1";
+const apiSession = () => { try { return JSON.parse(localStorage.getItem(API_SESSION_KEY) || "null"); } catch (e) { return null; } };
+const setApiSession = s => { if (s) localStorage.setItem(API_SESSION_KEY, JSON.stringify(s)); else localStorage.removeItem(API_SESSION_KEY); };
+// โหมด api: ไม่มี URL/รหัสลับ/webhook ให้ตั้งอีกต่อไป (ใช้ล็อกอินกับ API) — ใส่ค่าเสมือนให้เงื่อนไข cfgReady()/webhook ทั้งคอนโซลผ่านโดยไม่ต้องแก้ทีละจุด
+if (API_MODE) { DB.cfg.url = "api"; DB.cfg.secret = "api"; DB.cfg.hook = "api"; DB.cfg.hookToken = ""; }
+
+function authMessage(status, j){
+  const code = String((j && (j.error_code || j.error || j.msg)) || "");
+  if (status === 400 && /invalid|credentials|grant/i.test(code + String((j && j.error_description) || ""))) return "ID (หรืออีเมล) หรือรหัสผ่านไม่ถูกต้อง";
+  if (status === 429) return "ลองเข้าสู่ระบบบ่อยเกินไป รอสักครู่แล้วลองใหม่";
+  if (status >= 500) return "ระบบเข้าสู่ระบบขัดข้องชั่วคราว ลองใหม่อีกครั้ง";
+  return "เข้าสู่ระบบไม่สำเร็จ";
+}
+async function supabaseAuth(grant, body){
+  let res;
+  try {
+    res = await fetch(`${CDM_CFG.supabaseUrl}/auth/v1/token?grant_type=${grant}`, {
+      method: "POST", headers: { "Content-Type": "application/json", apikey: CDM_CFG.supabaseAnonKey }, body: JSON.stringify(body),
+    });
+  } catch (e) { throw new Error("เชื่อมต่อระบบเข้าสู่ระบบไม่ได้ (ตรวจอินเทอร์เน็ต)"); }
+  let j = null; try { j = await res.json(); } catch (e) { /* ไม่ใช่ JSON */ }
+  if (!res.ok || !j || !j.access_token) { const err = new Error(authMessage(res.status, j)); err.status = res.status; throw err; }
+  return { access_token: j.access_token, refresh_token: j.refresh_token, expires_at: Date.now() + (Number(j.expires_in) || 3600) * 1000 };
+}
+
+let apiRefreshing = null;
+/** token ที่ใช้ได้ตอนนี้ — ต่ออายุเองเมื่อเหลือไม่ถึง 1 นาที (ถ้าต่อไม่ได้ = ออกจากระบบ) */
+async function getApiToken(){
+  const s = apiSession();
+  if (!s) throw new Error("ยังไม่ได้เข้าสู่ระบบ");
+  if (s.expires_at - Date.now() > 60000) return s.access_token;
+  if (!apiRefreshing) {
+    apiRefreshing = (async () => {
+      try { const t = await supabaseAuth("refresh_token", { refresh_token: s.refresh_token }); const n = Object.assign({}, s, t); setApiSession(n); return n; }
+      finally { apiRefreshing = null; }
+    })();
+  }
+  try { return (await apiRefreshing).access_token; }
+  catch (e) { apiSignOut(); throw new Error("หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่"); }
+}
+/** ออกจากระบบ: ล้าง token + ข้อมูลที่แคชไว้ในเครื่องนี้ (ไม่ให้ข้อมูลของคนก่อนค้างให้คนถัดไปเห็น) แล้วกลับหน้าล็อกอิน */
+function apiSignOut(){
+  setApiSession(null);
+  localStorage.removeItem(KEY);
+  DB.streamers = []; DB.pending = []; DB.usedIds = []; DB.sheet = Object.assign({}, DEF.sheet);
+  setLocked(true); applyRoleUI();
+  try { render(); } catch (e) { /* หน้ายังโหลดไม่เสร็จ */ }
+  if (typeof renderApiUser === "function") renderApiUser();
+}
+
+function apiMessage(j, status){
+  if (j && Array.isArray(j.problems) && j.problems.length) {
+    const items = j.problems.slice(0, 5).map(p => `${p.key || ""} ${p.field || ""}: ${p.problem}`.trim());
+    return `${j.error} — ${items.join("; ")}${j.problems.length > 5 ? ` …(อีก ${j.problems.length - 5})` : ""}`;
+  }
+  if (j && Array.isArray(j.fields) && j.fields.length) return `${j.error}: ${j.fields.join(", ")}`;
+  return (j && j.error) || (status ? `ระบบตอบกลับ ${status}` : "เชื่อมต่อระบบไม่ได้");
+}
+/** เรียก REST API ด้วย token ของผู้ใช้ — ข้อผิดพลาดเป็นข้อความไทยที่อ่านรู้เรื่อง (err.status, err.body เก็บไว้ให้ผู้เรียก) */
+async function apiFetch(method, path, body){
+  const token = await getApiToken();
+  let res;
+  try {
+    res = await fetch(`${CDM_CFG.apiBase}/api/v1${path}`, {
+      method, headers: Object.assign({ Authorization: `Bearer ${token}` }, body !== undefined ? { "Content-Type": "application/json" } : {}),
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (e) { throw new Error("เชื่อมต่อระบบไม่ได้ (ตรวจอินเทอร์เน็ต หรือบริการอาจกำลังรีสตาร์ต ลองใหม่อีกครั้ง)"); }
+  let j = null; try { j = await res.json(); } catch (e) { /* ไม่ใช่ JSON */ }
+  if (res.status === 401) { apiSignOut(); throw new Error("หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่"); }
+  if (!res.ok || !j || j.ok === false) { const err = new Error(apiMessage(j, res.status)); err.status = res.status; err.body = j; throw err; }
+  return j;
+}
+
+const apiChunk = (a, n) => { const o = []; for (let i = 0; i < a.length; i += n) o.push(a.slice(i, i + n)); return o; };
+async function apiWriteCompat(p){
+  const out = { ok: true, contractsAdded: 0, streamersAdded: 0, skippedContracts: [], skippedStreamers: [], warnings: [] };
+  // ส่งเฉพาะสตรีมเมอร์ที่ยังไม่อยู่ในข้อมูลล่าสุดจากระบบ (คนที่มีอยู่แล้วระบบก็ข้ามให้อยู่ดี แต่ไม่ต้องส่งซ้ำทั้งรายชื่อทุกครั้ง)
+  const known = new Set((DB.sheet.streamers || []).map(s => String(s.streamer_id)));
+  const fresh = (p.streamers || []).filter(s => !known.has(String(s.streamer_id)));
+  for (const part of apiChunk(fresh, 400)) {
+    const r = await apiFetch("POST", "/streamers", { streamers: part });
+    out.streamersAdded += r.created.length;
+    out.skippedStreamers.push(...r.skipped.map(x => x.id));
+  }
+  for (const part of apiChunk(p.contracts || [], 400)) {
+    const r = await apiFetch("POST", "/contracts", { contracts: part });
+    out.contractsAdded += r.created.length;
+    for (const sk of r.skipped) {
+      if (sk.code === "id_exists") out.skippedContracts.push(sk.id);        // เลขชน -> คอนโซลออกเลขใหม่ให้เอง (พฤติกรรมเดิม)
+      else throw new Error(`สัญญา ${sk.id}: ${sk.reason}`);                // สัญญาซ้ำ: ออกเลขใหม่ก็ยังซ้ำ ต้องให้คนตัดสินใจ
+    }
+    out.warnings.push(...(r.warnings || []));
+  }
+  return out;
+}
+async function apiUpdateCompat(p){
+  const base = p.sheet === "Streamer_Master" ? "/streamers/" : p.sheet === "Contract_Tracker" ? "/contracts/" : null;
+  if (!base) return { ok: false, error: "แก้ข้อมูลส่วน " + p.sheet + " จากคอนโซลไม่ได้" };
+  let n = 0;
+  for (const row of p.rows || []) {
+    const id = row[p.keyField];
+    if (!id) return { ok: false, error: `แถวที่ส่งมาไม่มี ${p.keyField}` };
+    const fields = Object.fromEntries(Object.entries(row).filter(([k]) => k !== p.keyField));
+    await apiFetch("PATCH", base + encodeURIComponent(id), fields);
+    n++;
+  }
+  return { ok: true, updated: n };
+}
+async function apiDeleteCompat(p){
+  const r = await apiFetch("POST", "/contracts/delete", { ids: p.contractIds });
+  const bad = [...(r.refused || []).map(x => `${x.id}: ${x.reason}`), ...(r.failed || []).map(x => `${x.id}: ${(x.reasons || []).join("; ")}`)];
+  if (bad.length) {
+    // ลบสำเร็จบางฉบับ บางฉบับลบไม่ได้ — ให้ผู้ใช้รู้ชัดและดึงข้อมูลใหม่ (ไม่ลบแถวในหน้าจอเอง เพราะบางแถวยังอยู่จริง)
+    return { ok: false, error: `ลบสำเร็จ ${r.rowsDeleted} ฉบับ แต่ลบไม่ได้ ${bad.length} ฉบับ (${bad.slice(0, 3).join(" | ")}) — กด “ดึงข้อมูลจากชีต” เพื่อดูสถานะล่าสุด` };
+  }
+  // notFound เดิมใช้บอก "หาไฟล์ไม่เจอ" — รวมไฟล์ที่หายไปก่อนแล้วกับสัญญาที่ไม่พบ
+  return { ok: true, rowsDeleted: r.rowsDeleted, filesTrashed: r.filesTrashed, notFound: [...(r.notFound || []), ...Array(r.filesGone || 0).fill("")] };
+}
+/** แปลงคำสั่งเดิมของ Apps Script (action: read/write/update/...) เป็น REST — คืนผลรูปเดิม { ok, ... } เสมอ (ไม่ throw) */
+async function callApiCompat(p){
+  try {
+    switch (p.action) {
+      case "read": return await apiFetch("GET", "/snapshot");
+      case "write": return await apiWriteCompat(p);
+      case "update": return await apiUpdateCompat(p);
+      case "deleteContract": return await apiDeleteCompat(p);
+      case "getConfig": return await apiFetch("GET", "/config");
+      case "setConfig": return await apiFetch("PUT", "/config", { values: p.values || {} });
+      case "scanOrphans": case "trashOrphans": return { ok: false, error: "ระบบใหม่ยังไม่รองรับการสแกนและล้างไฟล์กำพร้า" };
+      default:
+        if (p.ping) { const me = await apiFetch("GET", "/me"); return { ok: true, sheet: "ฐานข้อมูลของระบบ", user: me.user }; }
+        return { ok: false, error: "คำสั่งนี้ยังไม่รองรับในระบบใหม่: " + p.action };
+    }
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+/** เข้าสู่ระบบด้วยอีเมล + รหัสผ่าน (ใช้ช่อง ID เดิมของหน้าล็อกอินเป็นช่องอีเมล) */
+/** ช่องเข้าสู่ระบบรับ "ID" ได้ เช่น viewer — Supabase ต้องใช้อีเมล จึงต่อท้ายด้วยโดเมนภายใน (บัญชีรวมของผู้เยี่ยมชมสร้างเป็น <ID>@โดเมนนี้)
+    ถ้าพิมพ์อีเมลเต็ม (มี @) ใช้ตามที่พิมพ์ ปรับโดเมนได้ที่ CDM_CONFIG.idDomain */
+const loginEmail = v => { const t = String(v || "").trim().toLowerCase(); return !t || t.includes("@") ? t : `${t}@${CDM_CFG.idDomain || "cdm-console.local"}`; };
+async function apiLogin(email, pw){
+  const errEl = document.getElementById("gateErr"), pwEl = document.getElementById("gatePw");
+  email = loginEmail(email);
+  if (!email || !pw) { errEl.textContent = "กรอก ID (หรืออีเมล) และรหัสผ่านให้ครบ"; return; }
+  if (!CDM_CFG.supabaseUrl || !CDM_CFG.supabaseAnonKey || !CDM_CFG.apiBase) { errEl.textContent = "ยังไม่ได้ตั้งค่าการเชื่อมต่อระบบ (CDM_CONFIG)"; return; }
+  errEl.textContent = "กำลังตรวจสอบ...";
+  try {
+    await completeLogin(await supabaseAuth("password", { email, password: pw }));
+    pwEl.value = ""; errEl.textContent = "";
+  } catch (e) {
+    setApiSession(null);
+    errEl.textContent = e.message;
+  }
+}
+/** ขั้นหลังได้ token จาก Supabase (ล็อกอินด้วยรหัสผ่านหรือ Google): ถามเซิร์ฟเวอร์ว่าบัญชีนี้มีสิทธิ์ไหม แล้วค่อยปลดล็อกหน้าจอ */
+async function completeLogin(t){
+  setApiSession(Object.assign({}, t, { user: null }));
+  const me = await apiFetch("GET", "/me");            // บทบาทมาจากฐานข้อมูลฝั่งเซิร์ฟเวอร์ ไม่ใช่จาก token
+  setApiSession(Object.assign({}, t, { user: me.user }));
+  setLocked(false); applyRoleUI();
+  if (typeof renderApiUser === "function") renderApiUser();
+  if (typeof pullFromSheet === "function") pullFromSheet(true);
+}
+/** เข้าสู่ระบบด้วย Google: ส่งไปหน้าล็อกอินของ Supabase แล้วกลับมาที่หน้านี้พร้อม token ในส่วน # ของ URL (ต้องเพิ่ม URL ของหน้านี้ใน Redirect URLs ของ Supabase) */
+function googleLogin(){
+  if (!CDM_CFG.supabaseUrl) { document.getElementById("gateErr").textContent = "ยังไม่ได้ตั้งค่าการเชื่อมต่อระบบ (CDM_CONFIG)"; return; }
+  location.href = `${CDM_CFG.supabaseUrl}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(location.origin + location.pathname)}`;
+}
+/** กลับมาจาก Google: อ่าน token จาก # (แล้วลบออกจาก URL ทันที) หรือแสดงข้อความถ้าล็อกอินไม่สำเร็จ */
+async function handleOAuthReturn(){
+  const h = new URLSearchParams(location.hash.replace(/^#/, ""));
+  if (!h.get("access_token") && !h.get("error")) return false;
+  history.replaceState(null, "", location.pathname + location.search);     // ไม่ให้ token ค้างในแถบที่อยู่/ประวัติ
+  const errEl = document.getElementById("gateErr");
+  if (h.get("error")) { errEl.textContent = "เข้าสู่ระบบด้วย Google ไม่สำเร็จ" + (h.get("error_description") ? ` (${h.get("error_description").slice(0, 120)})` : ""); return true; }
+  errEl.textContent = "กำลังตรวจสอบ...";
+  try {
+    await completeLogin({ access_token: h.get("access_token"), refresh_token: h.get("refresh_token"), expires_at: Date.now() + (Number(h.get("expires_in")) || 3600) * 1000 });
+    errEl.textContent = "";
+  } catch (e) {
+    setApiSession(null);
+    errEl.textContent = e.status === 403 ? "บัญชี Google นี้ยังไม่ได้รับสิทธิ์ใช้งานระบบสัญญา (ให้ผู้ดูแลเพิ่มสิทธิ์ให้)" : e.message;
+  }
+  return true;
+}
+
 /* ══════════ เข้าสู่ระบบก่อนเข้าคอนโซล (ID + รหัสผ่าน) ══════════
    ด่านอ่อน กันคนเดินผ่านมาเปิดลิงก์เท่านั้น — hash รวม ID กับรหัสผ่านเข้าด้วยกันก่อนแฮช (SHA-256)
    ผูกสองค่าไว้ในก้อนเดียว จะได้ไม่มีทางพิมพ์ ID ถูกสลับกับรหัสผ่านของอีกคนแล้วผ่าน
@@ -959,7 +1165,7 @@ const GATE_KEY = "cdm-console-unlocked-v1";
 const GATE_ROLE_KEY = "cdm-console-role-v1";
 // ไม่ใช่ความลับ — ตั้งใจฝังไว้ให้ผู้เยี่ยมชมใช้ Worker เป็นคนบังคับว่าคีย์นี้ปลดล็อกได้แค่สิทธิ์อ่านเท่านั้น
 const VIEWER_KEY = "vutlA7Te2fB40IaiukZixsUR";
-const isViewer = () => localStorage.getItem(GATE_ROLE_KEY) === "viewer";
+const isViewer = () => API_MODE ? ((apiSession() || {}).user || {}).role === "viewer" : localStorage.getItem(GATE_ROLE_KEY) === "viewer";
 
 async function sha256Hex(text){
   const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
@@ -968,7 +1174,10 @@ async function sha256Hex(text){
 /** รวม ID + รหัสผ่านเป็นก้อนเดียวก่อนแฮช — ต้องเหมือนกันทุกที่ที่คำนวณ (ที่นี่ กับตอนสร้างรหัสในแท็บตั้งค่า) */
 const gateCombine = (id, pw) => String(id || "").trim().toLowerCase() + "|" + String(pw || "");
 
-function gateNeeded(){ return GATE_HASH !== GATE_UNSET && localStorage.getItem(GATE_KEY) !== "1"; }
+function gateNeeded(){
+  if (API_MODE) return !apiSession() || !(apiSession().user);     // โหมดใหม่: ต้องมี session ที่ผ่านการยืนยันบทบาทแล้ว
+  return GATE_HASH !== GATE_UNSET && localStorage.getItem(GATE_KEY) !== "1";
+}
 function setLocked(on){ document.body.classList.toggle("locked", on); }
 function applyRoleUI(){ document.body.classList.toggle("viewer-mode", isViewer()); }
 setLocked(gateNeeded());
@@ -1013,8 +1222,8 @@ async function tryUnlock(id, pw){
         idEl  = document.getElementById("gateId"),
         pwEl  = document.getElementById("gatePw");
   if (goBtn){
-    goBtn.addEventListener("click", () => tryUnlock(idEl.value, pwEl.value));
-    const onEnter = e => { if (e.key === "Enter") tryUnlock(idEl.value, pwEl.value); };
+    goBtn.addEventListener("click", () => (API_MODE ? apiLogin : tryUnlock)(idEl.value, pwEl.value));
+    const onEnter = e => { if (e.key === "Enter") (API_MODE ? apiLogin : tryUnlock)(idEl.value, pwEl.value); };
     idEl.addEventListener("keydown", onEnter);
     pwEl.addEventListener("keydown", onEnter);
   }
@@ -1561,6 +1770,7 @@ function openForm(id){
   $("s_legal_th").value = s?.legal_name_th || "";
   $("s_addr_th").value  = s?.address_th || "";
   $("s_nid").value      = s?.national_id || "";
+  setupNidReveal(id);
 
   $("s_dfee").value     = s?.default_fee || "";
   $("s_dwallet").value  = s?.default_wallet_points || "";
@@ -1602,7 +1812,7 @@ $("saveStreamer").addEventListener("click", () => {
     bad.push("ชื่อตามกฎหมาย (อังกฤษหรือไทยอย่างน้อยหนึ่งอย่าง)");
   if (blank(rec.email)) bad.push("อีเมล"); else if (!EMAIL_RE.test(rec.email)) bad.push("อีเมล (รูปแบบผิด)");
   if (bad.length) return toast("กรอกไม่ครบ: " + bad.join(", "),"bad");
-  if (rec.national_id && !/^\d{13}$/.test(rec.national_id))
+  if (rec.national_id && !String(rec.national_id).includes("*") && !/^\d{13}$/.test(rec.national_id))
     return toast("เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก","bad");
   for (const [k, lab] of [["default_fee","ค่าจ้างตั้งต้น"],["default_wallet_points","points ตั้งต้น"],
                           ["default_clips_per_month","คลิป/ไลฟ์ตั้งต้น"]])
@@ -1973,7 +2183,10 @@ function profileErrorsFor(s, need){
   }
   if (need.has("NATIONAL_ID")){
     const nid = String(s.national_id || "").replace(/[\s-]/g, "");
-    if (!/^\d{13}$/.test(nid))
+    /* ค่าปิดบังจากระบบใหม่: ตรวจความยาวจาก national_id_digits — รายชื่อในเครื่อง (DB.streamers) ไม่เก็บช่องนี้
+       (เก็บเฉพาะ STREAMER_COLS) จึงต้องไปหาจากข้อมูลล่าสุดที่ดึงมาจากระบบ (DB.sheet.streamers) */
+    const digits = s.national_id_digits ?? (DB.sheet.streamers || []).find(x => String(x.streamer_id) === String(s.streamer_id))?.national_id_digits;
+    if (!(nid.includes("*") ? Number(digits) === 13 : /^\d{13}$/.test(nid)))
       e.push(nid === "" ? "ชุดเอกสารนี้ต้องใช้เลขบัตรประชาชน"
                         : "เลขบัตรประชาชนต้องเป็นตัวเลข 13 หลัก");
   }
@@ -2452,6 +2665,7 @@ $("clearRows").addEventListener("click", async () => {
 });
 
 async function callScript(payload){
+  if (API_MODE) return callApiCompat(payload);
   if (!DB.cfg.url) throw new Error("ยังไม่ได้ตั้งค่าการเชื่อมต่อชีต");
   // แนบ viewerKey เฉพาะตอนล็อกอินด้วยรหัสผู้เยี่ยมชม — Worker เป็นคนบังคับว่าคีย์นี้อ่านได้อย่างเดียว
   // (ดูฝั่งหน้าเว็บ/ปุ่มก็ซ่อนไว้อยู่แล้ว แต่ด่านจริงคือฝั่ง Worker ต่อให้เลี่ยงหน้าเว็บมาก็โดนบล็อก)
@@ -2489,6 +2703,7 @@ async function pushPending(){
        Apps Script จะข้ามแถวที่ชนไว้เฉย ๆ ไม่เขียนทับของเดิม — ฝั่งนี้ต้องรู้ว่าแถวไหนไม่ผ่าน
        แล้วออกเลขใหม่ให้ทันที ไม่งั้นข้อมูลที่กรอกไว้ทั้งชุดจะหายไปเงียบ ๆ เพราะเคลียร์ DB.pending ทิ้งหมด
        ไม่ว่าจะเข้าจริงกี่แถว (เป็นแบบนั้นมาก่อน ตอนมีคนเดียวใช้งานไม่มีทางชน แต่ตอนเปิดเป็นลิงก์ทีมมีโอกาสจริง) */
+    if (out.warnings && out.warnings.length) toast("เตือน: " + out.warnings.slice(0, 3).map(w => w.message).join("\n"), "bad", 9000);
     const skippedC = new Set(out.skippedContracts || []);
     const collided = DB.pending.filter(r => skippedC.has(r.contract_id));
     const sentCount = DB.pending.length - collided.length;
@@ -2820,6 +3035,7 @@ async function runWorkflow(btn){
   const old = btn.textContent;
   btn.textContent = "กำลังสั่ง..."; btn.disabled = true;
   try{
+    if (API_MODE) { await apiFetch("POST", "/runs"); btn.textContent = "สั่งแล้ว"; pollForCompletion(); return true; }
     const res = await fetch(DB.cfg.hook, {
       method:"POST",
       headers:{ "Content-Type":"application/json", "x-cdm-token": DB.cfg.hookToken || "" },
@@ -2867,6 +3083,133 @@ $("saveHook").addEventListener("click", async () => {
   }
 });
 
+/* ══════════ โหมด api: ส่วนหน้าจอ (ไม่ทำอะไรเลยในโหมด legacy) ══════════ */
+function renderApiUser(){
+  const chip = document.getElementById("userChip"), out = document.getElementById("apiLogoutBtn");
+  if (!chip || !out) return;
+  const u = (apiSession() || {}).user;
+  const on = API_MODE && !!u;
+  chip.style.display = on ? "" : "none"; out.style.display = on ? "" : "none";
+  // เปลี่ยนรหัสผ่านได้เฉพาะผู้ดูแลเป็นรายคน — บัญชีผู้เยี่ยมชมใช้รหัสร่วมกัน ให้ผู้ดูแลระบบเป็นคนเปลี่ยนที่ Supabase
+  const pw = document.getElementById("apiPwBtn"); if (pw) pw.style.display = on && u.role === "admin" ? "" : "none";
+  if (on) chip.textContent = `${u.name || u.email || "ผู้ใช้"} · ${u.role === "admin" ? "ผู้ดูแล" : "ผู้เยี่ยมชม"}`;
+}
+
+/** เปลี่ยนรหัสผ่านของบัญชีที่ล็อกอินอยู่ (Supabase Auth: PUT /auth/v1/user ด้วย token ของตัวเอง) — ไม่ต้องใช้อีเมลยืนยัน */
+const PW_MIN = 10;
+function pwMessage(status, j){
+  const code = String((j && (j.error_code || j.code || j.msg || j.message)) || "");
+  if (/same_password|different from the old/i.test(code)) return "รหัสผ่านใหม่ต้องไม่เหมือนรหัสเดิม";
+  if (/weak_password|too short|at least/i.test(code)) return `รหัสผ่านสั้นหรือคาดเดาง่ายเกินไป (ใช้อย่างน้อย ${PW_MIN} ตัว ผสมตัวอักษรและตัวเลข)`;
+  if (status === 401 || status === 403) return "หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่แล้วลองอีกครั้ง";
+  if (status === 429) return "ลองบ่อยเกินไป รอสักครู่แล้วลองใหม่";
+  return "เปลี่ยนรหัสผ่านไม่สำเร็จ";
+}
+async function supabaseUpdatePassword(token, password){
+  let res;
+  try {
+    res = await fetch(`${CDM_CFG.supabaseUrl}/auth/v1/user`, {
+      method: "PUT", headers: { "Content-Type": "application/json", apikey: CDM_CFG.supabaseAnonKey, Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ password }),
+    });
+  } catch (e) { throw new Error("เชื่อมต่อระบบเข้าสู่ระบบไม่ได้ (ตรวจอินเทอร์เน็ต)"); }
+  let j = null; try { j = await res.json(); } catch (e) { /* ไม่ใช่ JSON */ }
+  if (!res.ok) throw new Error(pwMessage(res.status, j));
+}
+async function changePassword(problem){
+  const ok = await ask({
+    title: "เปลี่ยนรหัสผ่าน", yes: "เปลี่ยนรหัสผ่าน", no: "ยกเลิก",
+    html: (problem ? `<div class="note" style="margin:0 0 10px">${esc(problem)}</div>` : "") +
+      `<div class="f"><label>รหัสผ่านใหม่</label><input id="pw1" type="password" autocomplete="new-password"></div>
+       <div class="f" style="margin-top:8px"><label>พิมพ์รหัสผ่านใหม่ซ้ำอีกครั้ง</label><input id="pw2" type="password" autocomplete="new-password"></div>
+       <div class="hint" style="margin-top:8px">อย่างน้อย ${PW_MIN} ตัวอักษร · เปลี่ยนแล้วใช้รหัสใหม่ตอนเข้าสู่ระบบครั้งถัดไป</div>`,
+  });
+  if (!ok) return;
+  const a = $("pw1").value, b = $("pw2").value;      // ช่องยังอยู่ใน DOM หลังกล่องปิด
+  if (a.length < PW_MIN) return changePassword(`รหัสผ่านต้องยาวอย่างน้อย ${PW_MIN} ตัวอักษร`);
+  if (a !== b) return changePassword("รหัสผ่านทั้งสองช่องไม่ตรงกัน");
+  try {
+    await supabaseUpdatePassword(await getApiToken(), a);
+    toast("เปลี่ยนรหัสผ่านแล้ว — ครั้งหน้าเข้าสู่ระบบด้วยรหัสใหม่", "ok", 6000);
+  } catch (e) { return changePassword(e.message); }
+}
+/** แถวสตรีมเมอร์ในหน้าจอเห็นเลขบัตรแบบปิดบัง — ผู้ดูแลกดปุ่มนี้เพื่อขอเลขเต็มมาแก้ (ระบบบันทึกว่าใครเปิดดู) */
+function setupNidReveal(id){
+  if (!API_MODE) return;
+  const el = $("s_nid");
+  let btn = document.getElementById("nidReveal");
+  if (!btn) {
+    btn = document.createElement("button");
+    btn.id = "nidReveal"; btn.type = "button"; btn.className = "sm"; btn.style.marginTop = "6px";
+    btn.textContent = "แสดงเลขบัตรเต็ม (ระบบบันทึกการเปิดดู)";
+    el.insertAdjacentElement("afterend", btn);
+  }
+  btn.style.display = (id && !isViewer() && String(el.value).includes("*")) ? "" : "none";
+  btn.onclick = async () => {
+    btn.disabled = true;
+    try { const r = await apiFetch("GET", `/streamers/${encodeURIComponent(id)}/private`); el.value = r.private.national_id || ""; btn.style.display = "none"; }
+    catch (e) { toast(e.message, "bad"); }
+    finally { btn.disabled = false; }
+  };
+}
+if (API_MODE) {
+  document.body.classList.add("api-mode");
+  const gid = document.getElementById("gateId");
+  if (gid) { gid.placeholder = "ID หรืออีเมล"; gid.type = "text"; gid.setAttribute("autocomplete", "username"); gid.setAttribute("autocapitalize", "none"); }
+  const gsub = document.querySelector("#gateScreen p");
+  if (gsub) gsub.textContent = "เข้าสู่ระบบด้วย ID หรืออีเมลที่ได้รับสิทธิ์จากผู้ดูแล";
+  // การ์ดที่ใช้เฉพาะระบบเดิม (Worker/Apps Script/รหัสผ่านร่วม/webhook/ไฟล์กำพร้า) — ซ่อนในโหมดใหม่
+  for (const id of ["cfgUrl", "cfgHook", "gwMake", "scanOrphanBtn", "copyTSV"]) {
+    const card = document.getElementById(id)?.closest(".card");
+    if (card) card.classList.add("legacy-only");
+  }
+  /* ถ้อยคำ: ระบบเดิมเรียกที่เก็บข้อมูลว่า "ชีต" — ในโหมดใหม่ข้อมูลอยู่ในระบบฐานข้อมูล จึงเปลี่ยนคำที่ผู้ใช้เห็น (ปุ่ม หัวข้อ ข้อความแจ้ง กล่องยืนยัน)
+     ตัวแปรและตรรกะภายในไม่ถูกแตะ — แก้เฉพาะ text node และเฝ้าดูข้อความที่เพิ่มเข้ามาทีหลัง */
+  const API_WORDING = [
+    [/แถวในชีตกู้คืนได้ผ่าน[\s\S]*$/, "ข้อมูลสัญญาที่ลบแล้วกู้กลับจากหน้าจอนี้ไม่ได้ (ผู้ดูแลระบบตรวจประวัติการแก้ไขในฐานข้อมูลได้) ส่วนไฟล์กู้คืนได้จากถังขยะของ Google Drive"],
+    [/ลบแถวออกจากชีต/g, "ลบสัญญาออกจากระบบ"],
+    [/สร้างและส่งขึ้นชีต/g, "สร้างและส่งเข้าระบบ"],
+    [/ส่งขึ้นชีต/g, "ส่งเข้าระบบ"],
+    [/ลงชีต/g, "ลงระบบ"],
+    [/ในชีต/g, "ในระบบ"],
+    [/จากชีต/g, "จากระบบ"],
+    [/\s?Google Sheets?/g, "ระบบ"],
+    [/ชีต/g, "ระบบ"],
+  ];
+  const rewordNode = n => {
+    const t = n.nodeValue;
+    if (!t || !/ชีต|Google Sheet/.test(t)) return;
+    let v = t;
+    for (const [re, to] of API_WORDING) v = v.replace(re, to);
+    if (v !== t) n.nodeValue = v;
+  };
+  const rewordTree = root => {
+    const w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, { acceptNode: n => (/^(SCRIPT|STYLE|TEXTAREA)$/.test(n.parentNode.nodeName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
+    const nodes = []; while (w.nextNode()) nodes.push(w.currentNode);
+    nodes.forEach(rewordNode);
+  };
+  rewordTree(document.body);
+  new MutationObserver(ms => {
+    for (const m of ms) {
+      if (m.type === "characterData") rewordNode(m.target);
+      m.addedNodes.forEach(n => { if (n.nodeType === 3) rewordNode(n); else if (n.nodeType === 1) rewordTree(n); });
+    }
+  }).observe(document.body, { childList: true, subtree: true, characterData: true });
+  renderApiUser();
+  document.getElementById("apiLogoutBtn").addEventListener("click", () => { apiSignOut(); location.reload(); });
+  document.getElementById("apiPwBtn").addEventListener("click", () => changePassword());
+  // ปุ่มเข้าสู่ระบบด้วย Google (โหมดใหม่เท่านั้น) ใต้ปุ่มเข้าสู่ระบบด้วย ID/รหัสผ่าน
+  const gg = document.createElement("button");
+  gg.type = "button"; gg.id = "gateGoogle"; gg.textContent = "เข้าสู่ระบบด้วย Google"; gg.style.cssText = "width:100%; margin-top:8px";
+  document.getElementById("gateGo").after(gg);
+  gg.addEventListener("click", googleLogin);
+  handleOAuthReturn();     // ถ้าเพิ่งกลับมาจากหน้า Google (มี token ใน #) จะล็อกอินให้เอง
+  // มี session ค้างอยู่ -> ยืนยันกับเซิร์ฟเวอร์ว่ายังใช้ได้และอัปเดตชื่อ/บทบาทล่าสุด (ถ้าใช้ไม่ได้ ระบบจะพากลับหน้าล็อกอินเอง)
+  if (apiSession()) {
+    apiFetch("GET", "/me").then(r => { const s = apiSession(); if (s) { s.user = r.user; setApiSession(s); } applyRoleUI(); renderApiUser(); }).catch(() => {});
+  }
+}
+
 /* ══════════ pull ══════════ */
 async function pullFromSheet(quiet){
   if (!DB.cfg.url){ if (!quiet) toast("ยังไม่ได้ตั้งค่าการเชื่อมต่อชีต — ไปที่แท็บ “ตั้งค่า” หรือใช้การนำเข้า CSV แทน","bad"); return; }
@@ -2877,7 +3220,7 @@ async function pullFromSheet(quiet){
     if (!out.ok) throw new Error(out.error||"ไม่ทราบสาเหตุ");
     /* ค่า n8n webhook เป็นค่ากลางของทั้งทีมแล้ว (ตั้งครั้งเดียวจากเครื่องไหนก็ได้ผ่านปุ่ม "บันทึก" ในตั้งค่า)
        ทุกครั้งที่ดึงข้อมูลจึงรับค่าล่าสุดจากชีตมาทับของในเครื่อง — ชีตคือของจริงเสมอ ไม่ใช่เครื่องนี้ */
-    if (out.config){
+    if (out.config && !API_MODE){
       DB.cfg.hook = out.config.n8n_hook_url || "";
       DB.cfg.hookToken = out.config.n8n_hook_token || "";
     }
@@ -2906,7 +3249,7 @@ async function pullFromSheet(quiet){
       if (touched) filled++;
     });
     DB.sheet.fetchedAt = new Date().toLocaleString("th-TH");
-    DB.sheet.source = "Google Sheet";
+    DB.sheet.source = API_MODE ? "ฐานข้อมูลของระบบ" : "Google Sheet";
     lastPull = Date.now();
     save(); render();
     if (!quiet){
