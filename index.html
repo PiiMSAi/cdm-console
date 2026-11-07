@@ -108,6 +108,22 @@
     .nextup button{margin-left:0; width:100%}
   }
   @keyframes beat{0%,100%{opacity:1}50%{opacity:.25}}
+  /* กล่องสถานะหลังกด "สร้างและส่งขึ้นชีต" */
+  #batchRun[hidden]{display:none}
+  #batchRun .brHead{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px}
+  #batchRun .brHead h2{margin:0}
+  #batchRun .brSteps{list-style:none; margin:0; padding:0; display:grid; gap:7px}
+  #batchRun .brSteps li{display:flex; gap:9px; align-items:baseline; font-size:14px; color:var(--ink-2)}
+  #batchRun .brSteps .ic{width:18px; flex:none; text-align:center; font-weight:700}
+  #batchRun .brSteps li.done{color:var(--ink)} #batchRun .brSteps li.done .ic{color:var(--good-ink)}
+  #batchRun .brSteps li.fail{color:var(--ink)} #batchRun .brSteps li.fail .ic{color:var(--critical-ink)}
+  #batchRun .brSteps li.now{color:var(--ink)} #batchRun .brSteps li.now .ic{color:var(--accent); animation:beat 1.1s infinite}
+  #batchRun .brBar{height:6px; border-radius:99px; background:var(--grid); overflow:hidden; margin:12px 0 2px}
+  #batchRun .brBar i{display:block; height:100%; width:0; background:var(--accent); transition:width .4s}
+  #batchRun .brBar.ok i{background:var(--good)}
+  #batchRun .brNote{margin-top:10px; font-size:12.5px; color:var(--muted)}
+  #batchRun .brFail{margin-top:10px; font-size:13px; color:var(--critical-ink)}
+  #batchRun .brFail ul{margin:4px 0 0; padding-left:18px}
 
   /* ══════════ sidebar ══════════ ซ้ายเป็นเมนู ขวาเป็นเนื้อหา — กว้างพอสมควรจะได้ไม่ต้องยุบ/ขยายกลุ่มเอง */
   .shell{display:flex; gap:26px; align-items:flex-start}
@@ -585,6 +601,8 @@
         <button class="sm" id="bulkApply" type="button">เติม</button>
       </div>
     </div>
+
+    <div class="card" id="batchRun" hidden aria-live="polite"></div>
 
     <div class="card">
       <div class="spread" style="margin-bottom:12px">
@@ -2276,6 +2294,74 @@ function renderBatchPreflight(){
   $("makeBatch").disabled = !!(be.length || bad.length || !members.length);
   renderTplInfo();
 }
+/* ══════════ กล่องสถานะหลังกด "สร้างและส่งขึ้นชีต" ══════════
+   เดิมกดแล้วหน้าเคลียร์ฟอร์มทันที ไม่มีอะไรบอกว่าสั่งไปแล้วหรือยังทำอยู่ — ผู้ใช้เลยเข้าใจว่าไม่ทำงาน
+   กล่องนี้อยู่นอกส่วนที่ render() วาดใหม่ จึงไม่หายตอนฟอร์มถูกเคลียร์ และอัปเดตเองจากรอบดึงชีตของ pollForCompletion()
+   stage: sending → ordering → generating (→ สรุปเองจากสถานะแถวในชีต) · แตกแขนง: pushfail, nohook, orderfail */
+let batchRun = null;   // { ids, bid, stage, timedOut, deadline }
+const BR_FINISHED_STAGES = ["pushfail","nohook","orderfail"];
+function batchRowsNow(){
+  if (!batchRun) return [];
+  return batchRun.ids.map(id => DB.sheet.tracker.find(r => String(r.contract_id) === id)).filter(Boolean);
+}
+/** แถวที่ระบบสร้างเสร็จแล้ว (ไม่ว่าผลสำเร็จหรือผิดพลาด) = ไม่ถูกขอสร้างค้างอยู่ และไม่ได้กำลังสร้าง */
+const brRowFinished = r => up(r.generation_requested) !== "YES" && up(r.status) !== "GENERATING";
+const brRowFailed = r => ["ERROR","QA_FAILED"].includes(up(r.status));
+/** ยังมีแถวของรอบนี้ที่สร้างไม่เสร็จไหม (ใช้ตัดสินว่า pollForCompletion ต้องตามต่อหรือเปล่า) */
+function batchRunPending(){
+  if (!batchRun || batchRun.stage !== "generating") return false;
+  const rows = batchRowsNow();
+  return rows.length < batchRun.ids.length || rows.some(r => !brRowFinished(r));
+}
+function renderBatchRun(){
+  const el = $("batchRun");
+  if (!batchRun){ el.hidden = true; el.innerHTML = ""; return; }
+  const b = batchRun, n = b.ids.length;
+  const rows = batchRowsNow();
+  const fin = rows.filter(brRowFinished), bad = fin.filter(brRowFailed);
+  const allDone = b.stage === "generating" && rows.length === n && fin.length === n;
+  const stageNow = allDone ? (bad.length ? "doneBad" : "done") : (b.timedOut && b.stage === "generating" ? "timeout" : b.stage);
+  const st = (cls, ic, text) => ({ cls, ic, text });
+
+  const s1 = b.stage === "sending" ? st("now","●",`กำลังส่ง ${n} สัญญาขึ้นชีต…`)
+    : b.stage === "pushfail" ? st("fail","✕","ส่งขึ้นชีตไม่สำเร็จ หรือส่งได้ไม่ครบ — ข้อมูลไม่หาย ไปดูที่หน้า “ส่งขึ้นชีตซ้ำ”")
+    : st("done","✓",`ส่ง ${n} สัญญาขึ้นชีตแล้ว`);
+  const s2 = (b.stage === "sending" || b.stage === "pushfail") ? st("","○","สั่งสร้างเอกสาร")
+    : b.stage === "ordering" ? st("now","●","กำลังสั่งสร้างเอกสาร…")
+    : b.stage === "nohook" ? st("fail","✕","ยังไม่ได้ตั้งค่า webhook — ไปตั้งค่าในแท็บ “ตั้งค่า” แล้วกด “สั่งสร้างเอกสารเดี๋ยวนี้” ที่หน้าภาพรวม")
+    : b.stage === "orderfail" ? st("fail","✕","สั่งสร้างเอกสารไม่สำเร็จ — สัญญาอยู่ในชีตแล้ว กด “สั่งสร้างเอกสารเดี๋ยวนี้” ที่หน้าภาพรวมได้")
+    : st("done","✓","สั่งสร้างเอกสารแล้ว");
+  let s3;
+  if (stageNow === "generating") s3 = st("now","●",`กำลังสร้างเอกสาร — เสร็จแล้ว ${fin.length} จาก ${n} สัญญา`);
+  else if (stageNow === "done") s3 = st("done","✓",`สร้างเอกสารเสร็จครบ ${n} สัญญา`);
+  else if (stageNow === "doneBad") s3 = st("fail","✕",`สร้างเสร็จแล้ว — สำเร็จ ${n - bad.length} · ผิดพลาด ${bad.length}`);
+  else if (stageNow === "timeout") s3 = st("fail","●",`ยังสร้างไม่เสร็จ (เสร็จแล้ว ${fin.length} จาก ${n} สัญญา) — ตามผลต่อที่หน้าภาพรวม`);
+  else s3 = st("","○","สร้างเอกสาร");
+
+  const showBar = ["generating","done","doneBad","timeout"].includes(stageNow);
+  const pct = n ? Math.round(fin.length / n * 100) : 0;
+  const finished = BR_FINISHED_STAGES.includes(stageNow) || ["done","doneBad","timeout"].includes(stageNow);
+  const failList = bad.length
+    ? `<div class="brFail"><b>ที่ผิดพลาด</b><ul>${bad.map(r =>
+        `<li>${esc(r.streamer_name || r.contract_id)} — ${esc((explainError(r.error_message)[0] || {}).w || "สร้างไม่สำเร็จ")}</li>`).join("")}</ul></div>`
+    : "";
+  el.innerHTML =
+    `<div class="brHead"><h2>สถานะการสร้างสัญญา · รอบ ${esc(b.bid)}</h2>
+       <div class="row" style="gap:8px">` +
+        (finished ? `<button class="sm" type="button" data-br="home">ดูที่หน้าภาพรวม</button><button class="sm" type="button" data-br="close">ปิด</button>` : "") +
+    `</div></div>
+     <ul class="brSteps">${[s1,s2,s3].map(s => `<li class="${s.cls}"><span class="ic">${s.ic}</span><span>${esc(s.text)}</span></li>`).join("")}</ul>` +
+    (showBar ? `<div class="brBar ${stageNow === "done" ? "ok" : ""}"><i style="width:${pct}%"></i></div>` : "") +
+    failList +
+    (stageNow === "generating" ? `<div class="brNote">ความคืบหน้าอัปเดตเองในกล่องนี้ ไม่ต้องรีเฟรชหน้า</div>` : "");
+  el.hidden = false;
+}
+$("batchRun").addEventListener("click", e => {
+  const t = e.target.closest("[data-br]"); if (!t) return;
+  if (t.dataset.br === "close"){ batchRun = null; renderBatchRun(); }
+  else if (t.dataset.br === "home") $("tabs").querySelector('button[data-p="home"]').click();
+});
+
 $("makeBatch").addEventListener("click", async () => {
   if (isViewer()) return toast("บัญชีผู้เยี่ยมชมดูข้อมูลได้อย่างเดียว","bad");
   const members = currentMembers();
@@ -2323,25 +2409,32 @@ $("makeBatch").addEventListener("click", async () => {
 
   if (!cfgReady()){
     // ยังไม่ได้ต่อ Apps Script — ตกกลับไปทางเดิม คัดลอกไปวางในชีตเอง
+    batchRun = null; renderBatchRun();
     $("tabs").querySelector('button[data-p="pending"]').click();
     toast(`สร้างแล้ว ${made.length} สัญญาในรอบ ${bid}\nยังไม่ได้ตั้งค่าการเชื่อมต่อชีต — คัดลอกไปวางในชีตเองที่หน้านี้`);
     return;
   }
+  // กล่องสถานะ: ขึ้นทันทีที่กด จะได้เห็นว่าระบบรับคำสั่งแล้ว (ฟอร์มด้านล่างถูกเคลียร์ไปแล้ว)
+  batchRun = { ids: made.map(r => String(r.contract_id)), bid, stage: "sending", timedOut: false, deadline: 0 };
+  renderBatchRun();
+  $("batchRun").scrollIntoView({ behavior: "smooth", block: "center" });
   const sent = await pushPending();
-  if (!sent) return;
+  if (!sent){ batchRun.stage = "pushfail"; renderBatchRun(); return; }
 
   /* สั่ง n8n ต่อให้เลย — แถวถูกตั้ง generation_requested = YES ไปแล้ว
      WF-01 ไม่มีตัวจับเวลาอัตโนมัติแล้ว (ตัดออกไปแล้ว) ถ้าไม่ตั้งค่า webhook ตรงนี้
      แถวจะค้างเป็น YES เฉย ๆ จนกว่าจะมีคนกดสั่งสร้างเอง ไม่มีอะไรมาหยิบไปทำให้เองอีกต่อไป */
   if (blank(DB.cfg.hook)){
+    batchRun.stage = "nohook"; renderBatchRun();
     toast(`สร้างและส่งขึ้นชีตแล้ว ${made.length} สัญญา · รอบ ${bid}\n` +
           `ยังไม่ได้ตั้งค่าการเชื่อมต่อ webhook — ต้องไปตั้งค่าในแท็บ "ตั้งค่า" แล้วกด "สั่งสร้างเอกสาร" เอง` +
           `\nไม่มีรอบอัตโนมัติแล้ว ถ้าไม่กด สัญญานี้จะไม่ถูกสร้างจนกว่าจะมีคนกด`, "bad", 9000);
     return;
   }
-  if (await runWorkflow($("runBtn")))
-    toast(`สร้างครบทั้งรอบแล้ว ${made.length} สัญญา · ${bid}\n` +
-          `กำลังสร้างเอกสาร — ผลจะขึ้นเองที่หน้าภาพรวมในไม่กี่วินาที`, "ok", 8000);
+  batchRun.stage = "ordering"; renderBatchRun();
+  if (await runWorkflow($("runBtn"))){
+    batchRun.stage = "generating"; batchRun.deadline = Date.now() + 5*60000; renderBatchRun();
+  } else { batchRun.stage = "orderfail"; renderBatchRun(); }
 });
 
 /* ══════════ ต่ออายุสัญญาที่ใกล้หมด ══════════
@@ -2771,7 +2864,14 @@ function pollForCompletion(){
   const tick = async () => {
     await pullFromSheet(true);
     const stillGoing = DB.sheet.tracker.some(r => up(r.status)==="GENERATING" || up(r.generation_requested)==="YES");
-    if (!stillGoing || Date.now() >= deadline) return;
+    // รอบที่เพิ่งสร้างจากหน้า "สร้างรอบสัญญา" ตามต่อได้นานกว่า (สัญญาเยอะใช้เวลานานกว่า 2 นาที) และอัปเดตกล่องสถานะทุกรอบ
+    const batchGoing = batchRunPending();
+    renderBatchRun();
+    const limit = batchGoing ? Math.max(deadline, batchRun.deadline) : deadline;
+    if ((!stillGoing && !batchGoing) || Date.now() >= limit){
+      if (batchGoing){ batchRun.timedOut = true; renderBatchRun(); }
+      return;
+    }
     pollTimer = setTimeout(tick, 6000);
   };
   pollTimer = setTimeout(tick, 5000);   // เผื่อเวลาให้ n8n claim แถวแรกก่อนเช็ครอบแรก
