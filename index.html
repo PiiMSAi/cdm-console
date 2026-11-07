@@ -114,9 +114,12 @@
   .dbTabs button.on{background:var(--accent); border-color:var(--accent); color:#fff}
   .dbTabs .n{margin-left:6px; font-size:11.5px; opacity:.8}
   /* ตารางกระชับให้พอดีหน้าเดียว ไม่ต้องเลื่อนแนวนอน — ชื่อ/ลิงก์ยาวถูกตัดด้วย … (เอาเมาส์ชี้ดูเต็ม) */
-  #tDash .dbLink, #tDash .dbCut{display:inline-block; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom}
-  #tDash td, #tDash th{white-space:nowrap; padding:8px 8px}
-  #tDash .dbTerm{padding:2px 9px; font-size:12px}
+  #tDash{table-layout:fixed; min-width:640px}          /* min-width: จอมือถือยังเลื่อนดูได้ ไม่บีบจนอ่านไม่ออก */
+  #tDash td, #tDash th{white-space:nowrap; padding:8px 6px; overflow:hidden; text-overflow:ellipsis}
+  #tDash th:nth-child(1){width:15%} #tDash th:nth-child(2){width:16%} #tDash th:nth-child(3){width:17%}
+  #tDash th:nth-child(4){width:16%} #tDash th:nth-child(5), #tDash th:nth-child(6){width:13.5%} #tDash th:nth-child(7){width:9%}
+  #tDash .dbLink, #tDash .dbCut{display:block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  #tDash .dbTerm{padding:2px 8px; font-size:12px}
   /* ป๊อปอัปสถานะการสร้างสัญญา — ลอยมุมขวาล่าง (อยู่ใน .toasts จึงซ้อนใต้ข้อความแจ้งเตือน) เห็นได้ทุกหน้า */
   #batchRun{pointer-events:auto; width:min(340px,calc(100vw - 32px)); box-sizing:border-box; background:var(--surface); color:var(--ink);
     border:1px solid var(--ring); border-left:3px solid var(--accent); border-radius:12px; padding:12px 14px;
