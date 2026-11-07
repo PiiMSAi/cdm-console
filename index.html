@@ -465,6 +465,7 @@
         <h2 style="margin:0">สตรีมเมอร์และสถานะสัญญา</h2>
         <span class="hint">เรียงตามวันเริ่มสัญญา เก่าสุดอยู่บน</span>
       </div>
+      <input type="search" id="dbSearch" placeholder="ค้นหา ชื่อช่อง · ชื่อจริง · ลิงก์ · สถานะ (เช่น Active, ใกล้หมดสัญญา)" autocomplete="off" aria-label="ค้นหาสตรีมเมอร์และสัญญา" style="width:100%; box-sizing:border-box; margin-bottom:10px">
       <div class="dbTabs" id="dbTabs" role="tablist"></div>
       <div class="scroll"><table id="tDash"></table></div>
       <div class="row" id="dbPager" style="margin-top:12px; justify-content:center; display:none">
@@ -3932,23 +3933,70 @@ const DASH_TABS = [
   { key:"ph",  label:"PH",      project:"Cabal PH" },
   { key:"id",  label:"ID",      project:"Cabal ID" },
 ];
-const DASH_STATE_EXTRA = {
-  DRAFT:                 { pill:"flat", label:"ร่าง" },
-  READY_FOR_GENERATION:  { pill:"mid",  label:"รอสร้างเอกสาร" },
+/* สถานะที่แสดงในแดชบอร์ด = "ภาวะของสัญญา" ที่อ่านง่าย คำนวณจากสถานะในขั้นตอนงาน + วันที่สัญญา (ไม่ได้เก็บเพิ่มในชีต)
+   • Active/ใกล้หมดสัญญา/หมดสัญญา/ยังไม่เริ่ม — เฉพาะสัญญาที่สร้างแล้วหรือเซ็นแล้ว (GENERATED/SIGNED เหมือนเกณฑ์หน้าต่ออายุ) ดูจากวันเริ่ม-หมด
+   • Terminated — สัญญาที่ถูกยกเลิก/ปฏิเสธ (CANCELLED/DECLINED) ในชีตไม่มีช่อง "ยกเลิกสัญญา" โดยเฉพาะ จึงยึดตามสถานะนี้
+   • ร่าง / ระหว่างดำเนินการ / มีปัญหา — ยังไม่เป็นสัญญาที่มีผล */
+const DASH_EXPIRING_DAYS = 30;   // เกณฑ์เดียวกับหน้า "ต่ออายุสัญญา"
+const DASH_STATES = {
+  active:     { label:"Active",           pill:"ok" },
+  expiring:   { label:"ใกล้หมดสัญญา",     pill:"action" },
+  expired:    { label:"หมดสัญญา",         pill:"flat" },
+  terminated: { label:"Terminated",       pill:"no" },
+  upcoming:   { label:"ยังไม่เริ่ม",       pill:"mid" },
+  progress:   { label:"ระหว่างดำเนินการ", pill:"mid" },
+  draft:      { label:"ร่าง",             pill:"flat" },
+  problem:    { label:"มีปัญหา",          pill:"no" },
 };
-let dashTab = "all", dashPage = 1;
+const dashDay = iso => new Date(iso + "T00:00:00");
+function dashState(r){
+  const s = up(r.status);
+  if (["CANCELLED","DECLINED"].includes(s)) return "terminated";
+  if (s === "EXPIRED") return "expired";
+  if (["ERROR","QA_FAILED"].includes(s)) return "problem";
+  if (["","DRAFT","READY_FOR_GENERATION","GENERATING"].includes(s)) return "draft";
+  if (!["GENERATED","SIGNED"].includes(s)) return "progress";      // QA / อนุมัติ / ส่งเซ็น ฯลฯ
+  const today = refDate();
+  if (DATE_RE.test(r.contract_start || "") && dashDay(r.contract_start) > today) return "upcoming";
+  if (DATE_RE.test(r.contract_end || "")){
+    const d = daysBetween(dashDay(r.contract_end), today);
+    if (d < 0) return "expired";
+    if (d <= DASH_EXPIRING_DAYS) return "expiring";
+  }
+  return "active";
+}
+/** คำอธิบายตอนเอาเมาส์ชี้ป้ายสถานะ */
+function dashStateTip(r, key){
+  if (key === "expiring" || key === "expired"){
+    const d = daysBetween(dashDay(r.contract_end), refDate());
+    return d < 0 ? `หมดสัญญามาแล้ว ${Math.abs(d)} วัน` : d === 0 ? "หมดสัญญาวันนี้" : `เหลืออีก ${d} วัน`;
+  }
+  return r.status ? `สถานะในระบบ: ${r.status}` : "ยังไม่ได้ส่งขึ้นระบบ";
+}
+let dashTab = "all", dashPage = 1, dashQ = "", dashMap = new Map();
 const dashProjectOf = r => String(r.project || "").trim().toLowerCase();
-function dashRows(tabKey){
-  const t = DASH_TABS.find(x => x.key === tabKey) || DASH_TABS[0];
-  const rows = (DB.sheet.tracker || []).filter(r => !t.project || dashProjectOf(r) === t.project.toLowerCase());
-  const startKey = r => /^\d{4}-\d{2}-\d{2}$/.test(String(r.contract_start || "")) ? r.contract_start : "9999-99-99";
-  return rows.slice().sort((a, b) => startKey(a).localeCompare(startKey(b)) || String(a.contract_id).localeCompare(String(b.contract_id)));
+/** ข้อมูลสตรีมเมอร์ล่าสุดจากระบบก่อน ถ้าไม่มีใช้ของในเครื่อง (สร้างตารางค้นหาไว้ครั้งเดียวต่อการวาด) */
+function dashStreamer(id){ return dashMap.get(String(id)) || {}; }
+function dashBuildMap(){
+  dashMap = new Map();
+  (DB.streamers || []).forEach(s => dashMap.set(String(s.streamer_id), s));
+  (DB.sheet.streamers || []).forEach(s => dashMap.set(String(s.streamer_id), s));
 }
-/** ข้อมูลสตรีมเมอร์ล่าสุดจากระบบก่อน ถ้าไม่มีใช้ของในเครื่อง */
-function dashStreamer(id){
-  const key = String(id);
-  return (DB.sheet.streamers || []).find(s => String(s.streamer_id) === key) || findStreamer(id) || {};
+/** ข้อความที่ใช้ค้นหา: ชื่อช่อง/ชื่อในวงการ/ชื่อจริงทั้งไทยและอังกฤษ/ลิงก์/สถานะ/รหัส (พิมพ์หลายคำ = ต้องเจอทุกคำ) */
+function dashHay(it){
+  const { r, s, st } = it;
+  return [s.channel_name, r.streamer_name, r.streamer_id, s.channel_url, s.legal_name_th, s.legal_name,
+          DASH_STATES[st].label, st, r.status, r.contract_id, r.project].map(x => String(x ?? "")).join(" ").toLowerCase();
 }
+function dashItems(){
+  const startKey = r => DATE_RE.test(String(r.contract_start || "")) ? r.contract_start : "9999-99-99";
+  const words = dashQ.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  return (DB.sheet.tracker || [])
+    .map(r => ({ r, s: dashStreamer(r.streamer_id), st: dashState(r) }))
+    .filter(it => !words.length || (h => words.every(w => h.includes(w)))(dashHay(it)))
+    .sort((a, b) => startKey(a.r).localeCompare(startKey(b.r)) || String(a.r.contract_id).localeCompare(String(b.r.contract_id)));
+}
+const dashInTab = (it, t) => !t.project || dashProjectOf(it.r) === t.project.toLowerCase();
 /** ชื่อจริง-นามสกุล: โครงการไทย (CDM/P2W) ใช้ชื่อไทยก่อน โครงการต่างประเทศใช้ชื่อภาษาอังกฤษก่อน */
 function dashRealName(s, project){
   const th = String(s.legal_name_th || "").trim(), en = String(s.legal_name || "").trim();
@@ -3967,24 +4015,28 @@ function dashLink(url){
 }
 function renderDash(){
   if (!$("tDash")) return;
+  dashBuildMap();
+  const items = dashItems();                     // กรองด้วยคำค้นแล้ว เรียงตามวันเริ่มสัญญาแล้ว
+  const searching = dashQ.trim() !== "";
   $("dbTabs").innerHTML = DASH_TABS.map(t => {
-    const n = dashRows(t.key).length;
+    const n = items.filter(it => dashInTab(it, t)).length;      // ตัวเลขบนแท็บนับตามคำค้น จะได้รู้ว่าเจออยู่โครงการไหน
     return `<button type="button" role="tab" data-dbtab="${t.key}" class="${t.key === dashTab ? "on" : ""}" aria-selected="${t.key === dashTab}">${esc(t.label)}<span class="n">${n}</span></button>`;
   }).join("");
-  const rows = dashRows(dashTab);
+  const tab = DASH_TABS.find(x => x.key === dashTab) || DASH_TABS[0];
+  const rows = items.filter(it => dashInTab(it, tab));
   const pages = Math.max(1, Math.ceil(rows.length / DASH_PER_PAGE));
   dashPage = Math.min(Math.max(1, dashPage), pages);
   const slice = rows.slice((dashPage - 1) * DASH_PER_PAGE, dashPage * DASH_PER_PAGE);
   tbl($("tDash"), [
-    { h:"ชื่อช่อง", f:r => { const s = dashStreamer(r.streamer_id); return esc(s.channel_name || r.streamer_name || r.streamer_id); } },
-    { h:"ลิงก์ช่อง", f:r => dashLink(dashStreamer(r.streamer_id).channel_url) },
-    { h:"ชื่อจริง-นามสกุล", f:r => dashRealName(dashStreamer(r.streamer_id), r.project) },
-    { h:"สถานะสัญญา", f:r => { const st = RES_STATE[up(r.status)] || DASH_STATE_EXTRA[up(r.status)] || { pill:"flat", label:r.status || "—" };
-        return `<span class="pill ${st.pill}">${esc(st.label)}</span>`; } },
-    { h:"วันเริ่มสัญญา", cls:"mono", f:r => esc(fmtDMY(r.contract_start) || "—") },
-    { h:"วันหมดสัญญา",  cls:"mono", f:r => esc(fmtDMY(r.contract_end) || "—") },
-  ], slice, (DB.sheet.tracker || []).length ? "ยังไม่มีสัญญาในกลุ่มนี้" : "ยังไม่มีข้อมูล — กด “ดึงข้อมูลจากชีต”");
-  $("dbInfo").textContent = `หน้า ${dashPage}/${pages} · ทั้งหมด ${rows.length} สัญญา`;
+    { h:"ชื่อช่อง", f:it => esc(it.s.channel_name || it.r.streamer_name || it.r.streamer_id) },
+    { h:"ลิงก์ช่อง", f:it => dashLink(it.s.channel_url) },
+    { h:"ชื่อจริง-นามสกุล", f:it => dashRealName(it.s, it.r.project) },
+    { h:"สถานะสัญญา", f:it => `<span class="pill ${DASH_STATES[it.st].pill}" title="${esc(dashStateTip(it.r, it.st))}">${esc(DASH_STATES[it.st].label)}</span>` },
+    { h:"วันเริ่มสัญญา", cls:"mono", f:it => esc(fmtDMY(it.r.contract_start) || "—") },
+    { h:"วันหมดสัญญา",  cls:"mono", f:it => esc(fmtDMY(it.r.contract_end) || "—") },
+  ], slice, searching ? `ไม่พบสัญญาที่ตรงกับ “${dashQ.trim()}”`
+          : (DB.sheet.tracker || []).length ? "ยังไม่มีสัญญาในกลุ่มนี้" : "ยังไม่มีข้อมูล — กด “ดึงข้อมูลจากชีต”");
+  $("dbInfo").textContent = `หน้า ${dashPage}/${pages} · ${searching ? "พบ" : "ทั้งหมด"} ${rows.length} สัญญา`;
   $("dbPrev").disabled = dashPage <= 1;
   $("dbNext").disabled = dashPage >= pages;
   $("dbPager").style.display = rows.length > DASH_PER_PAGE ? "flex" : "none";
@@ -3993,6 +4045,7 @@ $("dbTabs").addEventListener("click", e => {
   const b = e.target.closest("[data-dbtab]"); if (!b) return;
   dashTab = b.dataset.dbtab; dashPage = 1; renderDash();
 });
+$("dbSearch").addEventListener("input", e => { dashQ = e.target.value; dashPage = 1; renderDash(); });
 $("dbPrev").addEventListener("click", () => { dashPage--; renderDash(); });
 $("dbNext").addEventListener("click", () => { dashPage++; renderDash(); });
 
