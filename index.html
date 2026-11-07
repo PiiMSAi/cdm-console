@@ -3934,32 +3934,27 @@ const DASH_TABS = [
   { key:"id",  label:"ID",      project:"Cabal ID" },
 ];
 /* สถานะที่แสดงในแดชบอร์ด = "ภาวะของสัญญา" ที่อ่านง่าย คำนวณจากสถานะในขั้นตอนงาน + วันที่สัญญา (ไม่ได้เก็บเพิ่มในชีต)
-   • Active/ใกล้หมดสัญญา/หมดสัญญา/ยังไม่เริ่ม — เฉพาะสัญญาที่สร้างแล้วหรือเซ็นแล้ว (GENERATED/SIGNED เหมือนเกณฑ์หน้าต่ออายุ) ดูจากวันเริ่ม-หมด
+   มีแค่ 4 สถานะ: Active / Expiring Soon / Expired / Terminated
+   • สัญญาที่สร้างแล้วหรือเซ็นแล้ว (GENERATED/SIGNED เหมือนเกณฑ์หน้าต่ออายุ) ดูจากวันเริ่ม-หมด — วันเริ่มยังไม่ถึงก็นับเป็น Active
    • Terminated — สัญญาที่ถูกยกเลิก/ปฏิเสธ (CANCELLED/DECLINED) ในชีตไม่มีช่อง "ยกเลิกสัญญา" โดยเฉพาะ จึงยึดตามสถานะนี้
-   • Draft / In Progress / Error — ยังไม่เป็นสัญญาที่มีผล · ช่อง alias = คำไทยเดิม ใช้ค้นหาได้ด้วย */
+   • สัญญาที่ยังไม่เป็นสัญญาที่มีผล (ร่าง / กำลังสร้าง / ระหว่างตรวจ-ส่งเซ็น / ผิดพลาด) ไม่แสดงในแดชบอร์ด
+     (dashState คืน null) — ยังดูได้ที่ "ผลการสร้างสัญญาล่าสุด" · alias = คำไทย ใช้ค้นหาได้ด้วย */
 const DASH_EXPIRING_DAYS = 30;   // เกณฑ์เดียวกับหน้า "ต่ออายุสัญญา"
 const DASH_STATES = {
   active:     { label:"Active",           pill:"ok" },
   expiring:   { label:"Expiring Soon",    pill:"action", alias:"ใกล้หมดสัญญา" },
   expired:    { label:"Expired",          pill:"flat",   alias:"หมดสัญญา" },
-  terminated: { label:"Terminated",       pill:"no" },
-  upcoming:   { label:"Upcoming",         pill:"mid",    alias:"ยังไม่เริ่ม" },
-  progress:   { label:"In Progress",      pill:"mid",    alias:"ระหว่างดำเนินการ" },
-  draft:      { label:"Draft",            pill:"flat",   alias:"ร่าง" },
-  problem:    { label:"Error",            pill:"no",     alias:"มีปัญหา ผิดพลาด" },
+  terminated: { label:"Terminated",       pill:"no",     alias:"ยกเลิก" },
 };
 const dashDay = iso => new Date(iso + "T00:00:00");
+/** คืนรหัสสถานะ 4 แบบ หรือ null = ยังไม่ใช่สัญญาที่มีผล (ซ่อน) */
 function dashState(r){
   const s = up(r.status);
   if (["CANCELLED","DECLINED"].includes(s)) return "terminated";
   if (s === "EXPIRED") return "expired";
-  if (["ERROR","QA_FAILED"].includes(s)) return "problem";
-  if (["","DRAFT","READY_FOR_GENERATION","GENERATING"].includes(s)) return "draft";
-  if (!["GENERATED","SIGNED"].includes(s)) return "progress";      // QA / อนุมัติ / ส่งเซ็น ฯลฯ
-  const today = refDate();
-  if (DATE_RE.test(r.contract_start || "") && dashDay(r.contract_start) > today) return "upcoming";
+  if (!["GENERATED","SIGNED"].includes(s)) return null;           // ร่าง / กำลังสร้าง / QA / ส่งเซ็น / ผิดพลาด
   if (DATE_RE.test(r.contract_end || "")){
-    const d = daysBetween(dashDay(r.contract_end), today);
+    const d = daysBetween(dashDay(r.contract_end), refDate());
     if (d < 0) return "expired";
     if (d <= DASH_EXPIRING_DAYS) return "expiring";
   }
@@ -3993,6 +3988,7 @@ function dashItems(){
   const words = dashQ.trim().toLowerCase().split(/\s+/).filter(Boolean);
   return (DB.sheet.tracker || [])
     .map(r => ({ r, s: dashStreamer(r.streamer_id), st: dashState(r) }))
+    .filter(it => it.st)                                           // ซ่อนสัญญาที่ยังไม่มีผล
     .filter(it => !words.length || (h => words.every(w => h.includes(w)))(dashHay(it)))
     .sort((a, b) => startKey(a.r).localeCompare(startKey(b.r)) || String(a.r.contract_id).localeCompare(String(b.r.contract_id)));
 }
