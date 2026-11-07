@@ -3674,17 +3674,17 @@ const DASH_TABS = [
 /* สถานะที่แสดงในแดชบอร์ด = "ภาวะของสัญญา" ที่อ่านง่าย คำนวณจากสถานะในขั้นตอนงาน + วันที่สัญญา (ไม่ได้เก็บเพิ่มในชีต)
    • Active/ใกล้หมดสัญญา/หมดสัญญา/ยังไม่เริ่ม — เฉพาะสัญญาที่สร้างแล้วหรือเซ็นแล้ว (GENERATED/SIGNED เหมือนเกณฑ์หน้าต่ออายุ) ดูจากวันเริ่ม-หมด
    • Terminated — สัญญาที่ถูกยกเลิก/ปฏิเสธ (CANCELLED/DECLINED) ในชีตไม่มีช่อง "ยกเลิกสัญญา" โดยเฉพาะ จึงยึดตามสถานะนี้
-   • ร่าง / ระหว่างดำเนินการ / มีปัญหา — ยังไม่เป็นสัญญาที่มีผล */
+   • Draft / In Progress / Error — ยังไม่เป็นสัญญาที่มีผล · ช่อง alias = คำไทยเดิม ใช้ค้นหาได้ด้วย */
 const DASH_EXPIRING_DAYS = 30;   // เกณฑ์เดียวกับหน้า "ต่ออายุสัญญา"
 const DASH_STATES = {
   active:     { label:"Active",           pill:"ok" },
   expiring:   { label:"Expiring Soon",    pill:"action", alias:"ใกล้หมดสัญญา" },
   expired:    { label:"Expired",          pill:"flat",   alias:"หมดสัญญา" },
   terminated: { label:"Terminated",       pill:"no" },
-  upcoming:   { label:"ยังไม่เริ่ม",       pill:"mid" },
-  progress:   { label:"ระหว่างดำเนินการ", pill:"mid" },
-  draft:      { label:"ร่าง",             pill:"flat" },
-  problem:    { label:"มีปัญหา",          pill:"no" },
+  upcoming:   { label:"Upcoming",         pill:"mid",    alias:"ยังไม่เริ่ม" },
+  progress:   { label:"In Progress",      pill:"mid",    alias:"ระหว่างดำเนินการ" },
+  draft:      { label:"Draft",            pill:"flat",   alias:"ร่าง" },
+  problem:    { label:"Error",            pill:"no",     alias:"มีปัญหา ผิดพลาด" },
 };
 const dashDay = iso => new Date(iso + "T00:00:00");
 function dashState(r){
