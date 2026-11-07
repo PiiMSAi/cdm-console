@@ -108,22 +108,43 @@
     .nextup button{margin-left:0; width:100%}
   }
   @keyframes beat{0%,100%{opacity:1}50%{opacity:.25}}
-  /* กล่องสถานะหลังกด "สร้างและส่งขึ้นชีต" */
+  /* ป๊อปอัปสถานะการสร้างสัญญา — ลอยมุมขวาล่าง (อยู่ใน .toasts จึงซ้อนใต้ข้อความแจ้งเตือน) เห็นได้ทุกหน้า */
+  #batchRun{pointer-events:auto; width:min(340px,calc(100vw - 32px)); box-sizing:border-box; background:var(--surface); color:var(--ink);
+    border:1px solid var(--ring); border-left:3px solid var(--accent); border-radius:12px; padding:12px 14px;
+    box-shadow:0 10px 32px rgba(0,0,0,.28); animation:brIn .24s cubic-bezier(.2,.9,.3,1.2)}
   #batchRun[hidden]{display:none}
-  #batchRun .brHead{display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-bottom:10px}
-  #batchRun .brHead h2{margin:0}
-  #batchRun .brSteps{list-style:none; margin:0; padding:0; display:grid; gap:7px}
-  #batchRun .brSteps li{display:flex; gap:9px; align-items:baseline; font-size:14px; color:var(--ink-2)}
-  #batchRun .brSteps .ic{width:18px; flex:none; text-align:center; font-weight:700}
-  #batchRun .brSteps li.done{color:var(--ink)} #batchRun .brSteps li.done .ic{color:var(--good-ink)}
-  #batchRun .brSteps li.fail{color:var(--ink)} #batchRun .brSteps li.fail .ic{color:var(--critical-ink)}
-  #batchRun .brSteps li.now{color:var(--ink)} #batchRun .brSteps li.now .ic{color:var(--accent); animation:beat 1.1s infinite}
-  #batchRun .brBar{height:6px; border-radius:99px; background:var(--grid); overflow:hidden; margin:12px 0 2px}
+  #batchRun.ok{border-left-color:var(--good)}
+  #batchRun.bad{border-left-color:var(--critical)}
+  #batchRun svg{width:1em; height:1em; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; flex:none}
+  #batchRun .brTop{display:flex; align-items:center; gap:10px}
+  #batchRun .brBadge{width:32px; height:32px; border-radius:50%; display:grid; place-items:center; flex:none; font-size:17px;
+    color:var(--accent); background:color-mix(in srgb,var(--accent) 16%,transparent)}
+  #batchRun.ok .brBadge{color:var(--good-ink); background:color-mix(in srgb,var(--good) 18%,transparent)}
+  #batchRun.bad .brBadge{color:var(--critical-ink); background:color-mix(in srgb,var(--critical) 16%,transparent)}
+  #batchRun .brTxt{min-width:0; flex:1}
+  #batchRun .brTitle{font-weight:700; font-size:14px; line-height:1.3}
+  #batchRun .brSub{font-size:11.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+  #batchRun .brX{margin-left:auto; flex:none; width:28px; height:28px; display:grid; place-items:center; padding:0; font-size:15px;
+    border-radius:8px; border:1px solid var(--ring); background:transparent; color:var(--ink-2); cursor:pointer}
+  #batchRun .brX:hover{background:var(--plane); color:var(--ink)}
+  #batchRun .brBar{height:5px; border-radius:99px; background:var(--grid); overflow:hidden; margin:11px 0 0}
   #batchRun .brBar i{display:block; height:100%; width:0; background:var(--accent); transition:width .4s}
-  #batchRun .brBar.ok i{background:var(--good)}
-  #batchRun .brNote{margin-top:10px; font-size:12.5px; color:var(--muted)}
-  #batchRun .brFail{margin-top:10px; font-size:13px; color:var(--critical-ink)}
-  #batchRun .brFail ul{margin:4px 0 0; padding-left:18px}
+  #batchRun.ok .brBar i{background:var(--good)}
+  #batchRun.bad .brBar i{background:var(--critical)}
+  #batchRun .brSteps{display:flex; gap:4px 12px; flex-wrap:wrap; margin-top:10px; font-size:12px}
+  #batchRun .brSteps span{display:inline-flex; align-items:center; gap:5px; color:var(--muted)}
+  #batchRun .brSteps .done{color:var(--good-ink)}
+  #batchRun .brSteps .fail{color:var(--critical-ink)}
+  #batchRun .brSteps .now{color:var(--accent); font-weight:600}
+  #batchRun .brNote{margin-top:8px; font-size:12px; line-height:1.5; color:var(--ink-2)}
+  #batchRun .brFail{margin:8px 0 0; padding:0; list-style:none; font-size:12px; line-height:1.5; color:var(--critical-ink)}
+  #batchRun .brFail li{display:flex; gap:5px; align-items:baseline}
+  #batchRun .brGo{margin-top:10px; width:100%; display:flex; align-items:center; justify-content:center; gap:6px; font-size:12.5px}
+  #batchRun .spin{animation:brSpin .9s linear infinite; transform-origin:50% 50%}
+  @keyframes brIn{from{opacity:0; transform:translateY(14px) scale(.96)} to{opacity:1; transform:none}}
+  @keyframes brSpin{to{transform:rotate(360deg)}}
+  @media (max-width:560px){ #batchRun{width:auto} }
+  @media (prefers-reduced-motion:reduce){ #batchRun,#batchRun .spin{animation:none} }
 
   /* ══════════ sidebar ══════════ ซ้ายเป็นเมนู ขวาเป็นเนื้อหา — กว้างพอสมควรจะได้ไม่ต้องยุบ/ขยายกลุ่มเอง */
   .shell{display:flex; gap:26px; align-items:flex-start}
@@ -598,8 +619,6 @@
       </div>
     </div>
 
-    <div class="card" id="batchRun" hidden aria-live="polite"></div>
-
     <div class="card">
       <div class="spread" style="margin-bottom:12px">
         <h2 style="margin:0">ตรวจก่อนสร้าง</h2>
@@ -807,7 +826,7 @@
   </div>
 </div>
 
-<div class="toasts" id="toasts"></div>
+<div class="toasts" id="toasts"><div id="batchRun" hidden role="status" aria-live="polite"></div></div>
 
 <!-- รายการที่เปิดจากการกดตัวเลขสรุป -->
 <div class="modal mid" id="askModal">
@@ -1181,8 +1200,8 @@ function toast(msg, kind, ms){
   el.addEventListener("click", kill);
   $("toasts").appendChild(el);
   // เก็บไว้ไม่เกิน 4 อัน ไม่งั้นบังหน้าจอตอนทำงานเป็นชุด
-  const all = $("toasts").children;
-  while (all.length > 4) all[0].remove();
+  const all = $("toasts").querySelectorAll(":scope > .toast");   // ไม่นับป๊อปอัปสถานะ (#batchRun) ที่อยู่ในกล่องเดียวกัน
+  for (let i = 0; i < all.length - 4; i++) all[i].remove();
   setTimeout(kill, ms || (kind === "bad" ? 9000 : 3800));
   return el;
 }
@@ -2144,39 +2163,60 @@ function renderBatchRun(){
   const fin = rows.filter(brRowFinished), bad = fin.filter(brRowFailed);
   const allDone = b.stage === "generating" && rows.length === n && fin.length === n;
   const stageNow = allDone ? (bad.length ? "doneBad" : "done") : (b.timedOut && b.stage === "generating" ? "timeout" : b.stage);
-  const st = (cls, ic, text) => ({ cls, ic, text });
-
-  const s1 = b.stage === "sending" ? st("now","●",`กำลังส่ง ${n} สัญญาขึ้นชีต…`)
-    : b.stage === "pushfail" ? st("fail","✕","ส่งขึ้นชีตไม่สำเร็จ หรือส่งได้ไม่ครบ — ข้อมูลไม่หาย ไปดูที่หน้า “ส่งขึ้นชีตซ้ำ”")
-    : st("done","✓",`ส่ง ${n} สัญญาขึ้นชีตแล้ว`);
-  const s2 = (b.stage === "sending" || b.stage === "pushfail") ? st("","○","สั่งสร้างเอกสาร")
-    : b.stage === "ordering" ? st("now","●","กำลังสั่งสร้างเอกสาร…")
-    : b.stage === "nohook" ? st("fail","✕","ยังไม่ได้ตั้งค่า webhook — ไปตั้งค่าในแท็บ “ตั้งค่า” แล้วกด “สั่งสร้างเอกสารเดี๋ยวนี้” ที่หน้าภาพรวม")
-    : b.stage === "orderfail" ? st("fail","✕","สั่งสร้างเอกสารไม่สำเร็จ — สัญญาอยู่ในชีตแล้ว กด “สั่งสร้างเอกสารเดี๋ยวนี้” ที่หน้าภาพรวมได้")
-    : st("done","✓","สั่งสร้างเอกสารแล้ว");
-  let s3;
-  if (stageNow === "generating") s3 = st("now","●",`กำลังสร้างเอกสาร — เสร็จแล้ว ${fin.length} จาก ${n} สัญญา`);
-  else if (stageNow === "done") s3 = st("done","✓",`สร้างเอกสารเสร็จครบ ${n} สัญญา`);
-  else if (stageNow === "doneBad") s3 = st("fail","✕",`สร้างเสร็จแล้ว — สำเร็จ ${n - bad.length} · ผิดพลาด ${bad.length}`);
-  else if (stageNow === "timeout") s3 = st("fail","●",`ยังสร้างไม่เสร็จ (เสร็จแล้ว ${fin.length} จาก ${n} สัญญา) — ตามผลต่อที่หน้าภาพรวม`);
-  else s3 = st("","○","สร้างเอกสาร");
+  const ic = d => `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>`;
+  const IC = {
+    spin:  `<svg class="spin" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 12a9 9 0 1 1-6.2-8.55"/></svg>`,
+    check: ic("M20 6 9 17l-5-5"),
+    x:     ic("M18 6 6 18M6 6l12 12"),
+    warn:  ic("M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01"),
+    up:    ic("M12 16V4m0 0-4 4m4-4 4 4M4 20h16"),
+    send:  ic("M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"),
+    file:  ic("M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 13h6M9 17h6"),
+    home:  ic("M3 11 12 3l9 8M5 10v10h14V10"),
+  };
+  // ขั้นตอน: ไอคอนตามสถานะ (กำลังทำ=หมุน, เสร็จ=ติ๊ก, พัง=กากบาท, ยังไม่ถึง=ไอคอนของขั้นนั้น) + ป้ายสั้น ๆ
+  const step = (cls, own, label) => `<span class="${cls}">${cls === "now" ? IC.spin : cls === "done" ? IC.check : cls === "fail" ? IC.x : own}${esc(label)}</span>`;
+  const c1 = b.stage === "sending" ? "now" : b.stage === "pushfail" ? "fail" : "done";
+  const c2 = (b.stage === "sending" || b.stage === "pushfail") ? "" : b.stage === "ordering" ? "now" : (b.stage === "nohook" || b.stage === "orderfail") ? "fail" : "done";
+  const c3 = stageNow === "generating" ? "now" : stageNow === "done" ? "done" : (stageNow === "doneBad" || stageNow === "timeout") ? "fail" : "";
 
   const showBar = ["generating","done","doneBad","timeout"].includes(stageNow);
   const pct = n ? Math.round(fin.length / n * 100) : 0;
   const finished = BR_FINISHED_STAGES.includes(stageNow) || ["done","doneBad","timeout"].includes(stageNow);
+  const tone = (stageNow === "done") ? "ok" : (finished ? "bad" : "");     // ฟ้า=กำลังทำ เขียว=เสร็จ แดง=มีปัญหา
+  const head = {
+    sending:   ["กำลังสร้างสัญญา", `รอบ ${b.bid}`],
+    ordering:  ["กำลังสร้างสัญญา", `รอบ ${b.bid}`],
+    generating:["กำลังสร้างสัญญา", `${fin.length}/${n} ฉบับ · ${b.bid}`],
+    done:      ["สร้างเสร็จแล้ว", `${n} ฉบับ · ${b.bid}`],
+    doneBad:   ["เสร็จ แต่มีปัญหา", `สำเร็จ ${n - bad.length} · ผิดพลาด ${bad.length}`],
+    timeout:   ["ยังทำอยู่", `${fin.length}/${n} ฉบับ · ${b.bid}`],
+    pushfail:  ["ส่งไม่สำเร็จ", `รอบ ${b.bid}`],
+    nohook:    ["ยังไม่ได้สั่งสร้าง", `รอบ ${b.bid}`],
+    orderfail: ["สั่งสร้างไม่สำเร็จ", `รอบ ${b.bid}`],
+  }[stageNow];
+  const note = {
+    pushfail:  "ข้อมูลไม่หาย — ดูที่หน้า “ส่งซ้ำ”",
+    nohook:    "ตั้ง webhook ในแท็บ “ตั้งค่า” แล้วกด “สั่งสร้างเอกสารเดี๋ยวนี้”",
+    orderfail: "สัญญาอยู่ในระบบแล้ว — กด “สั่งสร้างเอกสารเดี๋ยวนี้” ที่หน้าภาพรวม",
+    timeout:   "ดูความคืบหน้าต่อที่หน้าภาพรวม",
+  }[stageNow] || "";
   const failList = bad.length
-    ? `<div class="brFail"><b>ที่ผิดพลาด</b><ul>${bad.map(r =>
-        `<li>${esc(r.streamer_name || r.contract_id)} — ${esc((explainError(r.error_message)[0] || {}).w || "สร้างไม่สำเร็จ")}</li>`).join("")}</ul></div>`
+    ? `<ul class="brFail">${bad.map(r =>
+        `<li>${IC.x}<span>${esc(r.streamer_name || r.contract_id)} — ${esc((explainError(r.error_message)[0] || {}).w || "สร้างไม่สำเร็จ")}</span></li>`).join("")}</ul>`
     : "";
+  el.className = tone;
   el.innerHTML =
-    `<div class="brHead"><h2>สถานะการสร้างสัญญา · รอบ ${esc(b.bid)}</h2>
-       <div class="row" style="gap:8px">` +
-        (finished ? `<button class="sm" type="button" data-br="home">ดูที่หน้าภาพรวม</button><button class="sm" type="button" data-br="close">ปิด</button>` : "") +
-    `</div></div>
-     <ul class="brSteps">${[s1,s2,s3].map(s => `<li class="${s.cls}"><span class="ic">${s.ic}</span><span>${esc(s.text)}</span></li>`).join("")}</ul>` +
-    (showBar ? `<div class="brBar ${stageNow === "done" ? "ok" : ""}"><i style="width:${pct}%"></i></div>` : "") +
+    `<div class="brTop">
+       <span class="brBadge">${!finished ? IC.spin : tone === "ok" ? IC.check : IC.warn}</span>
+       <div class="brTxt"><div class="brTitle">${esc(head[0])}</div><div class="brSub">${esc(head[1])}</div></div>` +
+       (finished ? `<button class="brX" type="button" data-br="close" aria-label="ปิด" title="ปิด">${IC.x}</button>` : "") +
+    `</div>` +
+    (showBar ? `<div class="brBar"><i style="width:${pct}%"></i></div>` : "") +
+    `<div class="brSteps">${step(c1, IC.up, "ส่งเข้าระบบ")}${step(c2, IC.send, "สั่งสร้าง")}${step(c3, IC.file, "สร้างเอกสาร")}</div>` +
     failList +
-    (stageNow === "generating" ? `<div class="brNote">ความคืบหน้าอัปเดตเองในกล่องนี้ ไม่ต้องรีเฟรชหน้า</div>` : "");
+    (note ? `<div class="brNote">${esc(note)}</div>` : "") +
+    (finished ? `<button class="sm brGo" type="button" data-br="home">${IC.home}ดูที่หน้าภาพรวม</button>` : "");
   el.hidden = false;
 }
 $("batchRun").addEventListener("click", e => {
@@ -2240,7 +2280,6 @@ $("makeBatch").addEventListener("click", async () => {
   // กล่องสถานะ: ขึ้นทันทีที่กด จะได้เห็นว่าระบบรับคำสั่งแล้ว (ฟอร์มด้านล่างถูกเคลียร์ไปแล้ว)
   batchRun = { ids: made.map(r => String(r.contract_id)), bid, stage: "sending", timedOut: false, deadline: 0 };
   renderBatchRun();
-  $("batchRun").scrollIntoView({ behavior: "smooth", block: "center" });
   const sent = await pushPending();
   if (!sent){ batchRun.stage = "pushfail"; renderBatchRun(); return; }
 
