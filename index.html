@@ -967,7 +967,7 @@ if (API_MODE) { DB.cfg.url = "api"; DB.cfg.secret = "api"; DB.cfg.hook = "api"; 
 
 function authMessage(status, j){
   const code = String((j && (j.error_code || j.error || j.msg)) || "");
-  if (status === 400 && /invalid|credentials|grant/i.test(code + String((j && j.error_description) || ""))) return "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+  if (status === 400 && /invalid|credentials|grant/i.test(code + String((j && j.error_description) || ""))) return "ID (หรืออีเมล) หรือรหัสผ่านไม่ถูกต้อง";
   if (status === 429) return "ลองเข้าสู่ระบบบ่อยเกินไป รอสักครู่แล้วลองใหม่";
   if (status >= 500) return "ระบบเข้าสู่ระบบขัดข้องชั่วคราว ลองใหม่อีกครั้ง";
   return "เข้าสู่ระบบไม่สำเร็จ";
@@ -1097,13 +1097,17 @@ async function callApiCompat(p){
 }
 
 /** เข้าสู่ระบบด้วยอีเมล + รหัสผ่าน (ใช้ช่อง ID เดิมของหน้าล็อกอินเป็นช่องอีเมล) */
+/** ช่องเข้าสู่ระบบรับ "ID" ได้ เช่น viewer — Supabase ต้องใช้อีเมล จึงต่อท้ายด้วยโดเมนภายใน (บัญชีรวมของผู้เยี่ยมชมสร้างเป็น <ID>@โดเมนนี้)
+    ถ้าพิมพ์อีเมลเต็ม (มี @) ใช้ตามที่พิมพ์ ปรับโดเมนได้ที่ CDM_CONFIG.idDomain */
+const loginEmail = v => { const t = String(v || "").trim().toLowerCase(); return !t || t.includes("@") ? t : `${t}@${CDM_CFG.idDomain || "cdm-console.local"}`; };
 async function apiLogin(email, pw){
   const errEl = document.getElementById("gateErr"), pwEl = document.getElementById("gatePw");
-  if (!email || !pw) { errEl.textContent = "กรอกอีเมลและรหัสผ่านให้ครบ"; return; }
+  email = loginEmail(email);
+  if (!email || !pw) { errEl.textContent = "กรอก ID (หรืออีเมล) และรหัสผ่านให้ครบ"; return; }
   if (!CDM_CFG.supabaseUrl || !CDM_CFG.supabaseAnonKey || !CDM_CFG.apiBase) { errEl.textContent = "ยังไม่ได้ตั้งค่าการเชื่อมต่อระบบ (CDM_CONFIG)"; return; }
   errEl.textContent = "กำลังตรวจสอบ...";
   try {
-    const t = await supabaseAuth("password", { email: String(email).trim(), password: pw });
+    const t = await supabaseAuth("password", { email, password: pw });
     setApiSession(Object.assign({}, t, { user: null }));
     const me = await apiFetch("GET", "/me");            // บทบาทมาจากฐานข้อมูลฝั่งเซิร์ฟเวอร์ ไม่ใช่จาก token
     setApiSession(Object.assign({}, t, { user: me.user }));
@@ -3123,9 +3127,9 @@ function setupNidReveal(id){
 if (API_MODE) {
   document.body.classList.add("api-mode");
   const gid = document.getElementById("gateId");
-  if (gid) { gid.placeholder = "อีเมล"; gid.type = "email"; gid.setAttribute("autocomplete", "username"); }
+  if (gid) { gid.placeholder = "ID หรืออีเมล"; gid.type = "text"; gid.setAttribute("autocomplete", "username"); gid.setAttribute("autocapitalize", "none"); }
   const gsub = document.querySelector("#gateScreen p");
-  if (gsub) gsub.textContent = "เข้าสู่ระบบด้วยอีเมลที่ได้รับสิทธิ์จากผู้ดูแล";
+  if (gsub) gsub.textContent = "เข้าสู่ระบบด้วย ID หรืออีเมลที่ได้รับสิทธิ์จากผู้ดูแล";
   // การ์ดที่ใช้เฉพาะระบบเดิม (Worker/Apps Script/รหัสผ่านร่วม/webhook/ไฟล์กำพร้า) — ซ่อนในโหมดใหม่
   for (const id of ["cfgUrl", "cfgHook", "gwMake", "scanOrphanBtn", "copyTSV"]) {
     const card = document.getElementById(id)?.closest(".card");
