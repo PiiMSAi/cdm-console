@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>CDM Contract Console</title>
+<!-- วันสลับ: บรรทัดนี้คือสวิตช์เปิดโหมดใหม่ (REST API บน Railway + Supabase Auth) — ถอนบรรทัดนี้ออก = กลับไปโหมดเดิม (Worker + Apps Script + ชีต) ด้วยไฟล์เดียวกัน
+     ค่าทั้งหมดเป็นค่าสาธารณะ (ที่อยู่ API, ที่อยู่โปรเจกต์ Supabase, publishable key) ไม่มีความลับ — ดู docs/CUTOVER.md ในโปรเจกต์ cdm-contract-system -->
+<script>window.CDM_CONFIG = { backend: "api", apiBase: "https://cdm-contract-system-production.up.railway.app", supabaseUrl: "https://paocpduerqmvnkzlqvrr.supabase.co", supabaseAnonKey: "sb_publishable_5iQSldH62M7YjVvcql0I9A_CjboHgwp", idDomain: "cdm-console.local" };</script>
 <style>
   :root{
     color-scheme: light;
