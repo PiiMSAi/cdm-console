@@ -113,8 +113,10 @@
   .dbTabs button{border-radius:99px; padding:5px 13px}
   .dbTabs button.on{background:var(--accent); border-color:var(--accent); color:#fff}
   .dbTabs .n{margin-left:6px; font-size:11.5px; opacity:.8}
-  #tDash .dbLink{display:inline-block; max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom}
-  #tDash td, #tDash th{white-space:nowrap}
+  /* ตารางกระชับให้พอดีหน้าเดียว ไม่ต้องเลื่อนแนวนอน — ชื่อ/ลิงก์ยาวถูกตัดด้วย … (เอาเมาส์ชี้ดูเต็ม) */
+  #tDash .dbLink, #tDash .dbCut{display:inline-block; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom}
+  #tDash td, #tDash th{white-space:nowrap; padding:8px 8px}
+  #tDash .dbTerm{padding:2px 9px; font-size:12px}
   /* ป๊อปอัปสถานะการสร้างสัญญา — ลอยมุมขวาล่าง (อยู่ใน .toasts จึงซ้อนใต้ข้อความแจ้งเตือน) เห็นได้ทุกหน้า */
   #batchRun{pointer-events:auto; width:min(340px,calc(100vw - 32px)); box-sizing:border-box; background:var(--surface); color:var(--ink);
     border:1px solid var(--ring); border-left:3px solid var(--accent); border-radius:12px; padding:12px 14px;
@@ -901,7 +903,7 @@
       <div class="row" style="margin-top:12px">
         <button class="primary" id="editSave" type="button">บันทึกลงชีต</button>
         <button id="editCancel" type="button">ยกเลิก</button>
-        <button class="danger" id="editTerminate" type="button" style="margin-left:auto" title="ตั้งสถานะสัญญานี้เป็น Terminated (ไม่ลบไฟล์)">ยกเลิกสัญญา (Terminate)</button>
+        <button class="danger" id="editTerminate" type="button" style="margin-left:auto" title="ตั้งสถานะสัญญานี้เป็น Terminated (ไม่ลบไฟล์)">ยกเลิกสัญญา</button>
         <button class="danger" id="editDelete" type="button">ลบสัญญานี้</button>
         <span class="hint" id="editMsg"></span>
       </div>
@@ -4037,7 +4039,7 @@ function dashRealName(s, project){
   const isTh = ["cdm","p2w"].includes(String(project || "").trim().toLowerCase());
   const main = isTh ? (th || en) : (en || th), other = isTh ? (th ? en : "") : (en ? th : "");
   if (!main) return '<span class="hint">—</span>';
-  return other && other !== main ? `<span title="${esc(other)}">${esc(main)}</span>` : esc(main);
+  return `<span class="dbCut" title="${esc(other && other !== main ? main + " / " + other : main)}">${esc(main)}</span>`;
 }
 function dashLink(url){
   const u = String(url || "").trim();
@@ -4062,7 +4064,7 @@ function renderDash(){
   dashPage = Math.min(Math.max(1, dashPage), pages);
   const slice = rows.slice((dashPage - 1) * DASH_PER_PAGE, dashPage * DASH_PER_PAGE);
   tbl($("tDash"), [
-    { h:"ชื่อช่อง", f:it => esc(it.s.channel_name || it.r.streamer_name || it.r.streamer_id) },
+    { h:"ชื่อช่อง", f:it => { const n = it.s.channel_name || it.r.streamer_name || it.r.streamer_id; return `<span class="dbCut" title="${esc(n)}">${esc(n)}</span>`; } },
     { h:"ลิงก์ช่อง", f:it => dashLink(it.s.channel_url) },
     { h:"ชื่อจริง-นามสกุล", f:it => dashRealName(it.s, it.r.project) },
     { h:"สถานะสัญญา", f:it => `<span class="pill ${DASH_STATES[it.st].pill}" title="${esc(dashStateTip(it.r, it.st))}">${esc(DASH_STATES[it.st].label)}</span>` },
@@ -4071,7 +4073,7 @@ function renderDash(){
     // ปุ่มยกเลิกสัญญา: เฉพาะผู้ดูแลที่เชื่อมชีตแล้ว และเฉพาะสัญญาที่ยกเลิกได้ (Active / Expiring Soon)
     ...((cfgReady() && !isViewer()) ? [
       { h:"", f:it => canTerminate(it.r)
-          ? `<button class="sm danger" type="button" data-term="${esc(it.r.contract_id)}" title="ตั้งสถานะสัญญานี้เป็น Terminated">ยกเลิกสัญญา</button>` : "" },
+          ? `<button class="sm danger dbTerm" type="button" data-term="${esc(it.r.contract_id)}" title="ยกเลิกสัญญานี้ (ตั้งสถานะ Terminated) — จะมีกล่องให้ยืนยันก่อน" aria-label="ยกเลิกสัญญา ${esc(it.r.contract_id)}">ยกเลิก</button>` : "" },
     ] : []),
   ], slice, searching ? `ไม่พบสัญญาที่ตรงกับ “${dashQ.trim()}”`
           : (DB.sheet.tracker || []).length ? "ยังไม่มีสัญญาในกลุ่มนี้" : "ยังไม่มีข้อมูล — กด “ดึงข้อมูลจากชีต”");
