@@ -108,6 +108,13 @@
     .nextup button{margin-left:0; width:100%}
   }
   @keyframes beat{0%,100%{opacity:1}50%{opacity:.25}}
+  /* แดชบอร์ดสตรีมเมอร์และสถานะสัญญา (หน้าภาพรวม) */
+  .dbTabs{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+  .dbTabs button{border-radius:99px; padding:5px 13px}
+  .dbTabs button.on{background:var(--accent); border-color:var(--accent); color:#fff}
+  .dbTabs .n{margin-left:6px; font-size:11.5px; opacity:.8}
+  #tDash .dbLink{display:inline-block; max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; vertical-align:bottom}
+  #tDash td, #tDash th{white-space:nowrap}
   /* ป๊อปอัปสถานะการสร้างสัญญา — ลอยมุมขวาล่าง (อยู่ใน .toasts จึงซ้อนใต้ข้อความแจ้งเตือน) เห็นได้ทุกหน้า */
   #batchRun{pointer-events:auto; width:min(340px,calc(100vw - 32px)); box-sizing:border-box; background:var(--surface); color:var(--ink);
     border:1px solid var(--ring); border-left:3px solid var(--accent); border-radius:12px; padding:12px 14px;
@@ -448,6 +455,20 @@
   <div class="page on" id="p-home">
     <div id="nextup"></div>
     <div class="tiles" id="tiles"></div>
+
+    <div class="card" id="dash">
+      <div class="spread" style="margin-bottom:12px">
+        <h2 style="margin:0">สตรีมเมอร์และสถานะสัญญา</h2>
+        <span class="hint">เรียงตามวันเริ่มสัญญา เก่าสุดอยู่บน</span>
+      </div>
+      <div class="dbTabs" id="dbTabs" role="tablist"></div>
+      <div class="scroll"><table id="tDash"></table></div>
+      <div class="row" id="dbPager" style="margin-top:12px; justify-content:center; display:none">
+        <button class="sm" id="dbPrev" type="button">← ก่อนหน้า</button>
+        <span class="hint" id="dbInfo"></span>
+        <button class="sm" id="dbNext" type="button">ถัดไป →</button>
+      </div>
+    </div>
 
     <div class="card">
       <div class="spread" style="margin-bottom:4px">
@@ -3638,10 +3659,86 @@ document.addEventListener("visibilitychange", () => {
   if (!document.hidden && DB.cfg.autoPull) pullIfStale(20000);
 });
 
+/* ══════════ แดชบอร์ด: สตรีมเมอร์และสถานะสัญญา (หน้าภาพรวม) ══════════
+   1 แถว = 1 สัญญาในระบบ (คนเดียวมีหลายสัญญาก็ขึ้นหลายแถว) · แท็บแบ่งตามโครงการของสัญญา
+   เรียงตามวันเริ่มสัญญา เก่าสุดบนสุด (ไม่มีวันที่ไปท้ายสุด) · หน้าละ 15 แถว */
+const DASH_PER_PAGE = 15;
+const DASH_TABS = [
+  { key:"all", label:"ทั้งหมด", project:null },
+  { key:"cdm", label:"CDM",     project:"CDM" },
+  { key:"p2w", label:"P2W",     project:"P2W" },
+  { key:"ph",  label:"PH",      project:"Cabal PH" },
+  { key:"id",  label:"ID",      project:"Cabal ID" },
+];
+const DASH_STATE_EXTRA = {
+  DRAFT:                 { pill:"flat", label:"ร่าง" },
+  READY_FOR_GENERATION:  { pill:"mid",  label:"รอสร้างเอกสาร" },
+};
+let dashTab = "all", dashPage = 1;
+const dashProjectOf = r => String(r.project || "").trim().toLowerCase();
+function dashRows(tabKey){
+  const t = DASH_TABS.find(x => x.key === tabKey) || DASH_TABS[0];
+  const rows = (DB.sheet.tracker || []).filter(r => !t.project || dashProjectOf(r) === t.project.toLowerCase());
+  const startKey = r => /^\d{4}-\d{2}-\d{2}$/.test(String(r.contract_start || "")) ? r.contract_start : "9999-99-99";
+  return rows.slice().sort((a, b) => startKey(a).localeCompare(startKey(b)) || String(a.contract_id).localeCompare(String(b.contract_id)));
+}
+/** ข้อมูลสตรีมเมอร์ล่าสุดจากระบบก่อน ถ้าไม่มีใช้ของในเครื่อง */
+function dashStreamer(id){
+  const key = String(id);
+  return (DB.sheet.streamers || []).find(s => String(s.streamer_id) === key) || findStreamer(id) || {};
+}
+/** ชื่อจริง-นามสกุล: โครงการไทย (CDM/P2W) ใช้ชื่อไทยก่อน โครงการต่างประเทศใช้ชื่อภาษาอังกฤษก่อน */
+function dashRealName(s, project){
+  const th = String(s.legal_name_th || "").trim(), en = String(s.legal_name || "").trim();
+  const isTh = ["cdm","p2w"].includes(String(project || "").trim().toLowerCase());
+  const main = isTh ? (th || en) : (en || th), other = isTh ? (th ? en : "") : (en ? th : "");
+  if (!main) return '<span class="hint">—</span>';
+  return other && other !== main ? `<span title="${esc(other)}">${esc(main)}</span>` : esc(main);
+}
+function dashLink(url){
+  const u = String(url || "").trim();
+  if (!u) return '<span class="hint">—</span>';
+  const shown = esc(u.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, ""));
+  return /^https?:\/\//i.test(u)
+    ? `<a class="dbLink" href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="${esc(u)}">${shown} ↗</a>`
+    : `<span class="dbLink" title="${esc(u)}">${shown}</span>`;      // ไม่ใช่ลิงก์ที่เปิดได้ (เช่นพิมพ์แค่ชื่อ) แสดงเป็นข้อความเฉย ๆ
+}
+function renderDash(){
+  if (!$("tDash")) return;
+  $("dbTabs").innerHTML = DASH_TABS.map(t => {
+    const n = dashRows(t.key).length;
+    return `<button type="button" role="tab" data-dbtab="${t.key}" class="${t.key === dashTab ? "on" : ""}" aria-selected="${t.key === dashTab}">${esc(t.label)}<span class="n">${n}</span></button>`;
+  }).join("");
+  const rows = dashRows(dashTab);
+  const pages = Math.max(1, Math.ceil(rows.length / DASH_PER_PAGE));
+  dashPage = Math.min(Math.max(1, dashPage), pages);
+  const slice = rows.slice((dashPage - 1) * DASH_PER_PAGE, dashPage * DASH_PER_PAGE);
+  tbl($("tDash"), [
+    { h:"ชื่อช่อง", f:r => { const s = dashStreamer(r.streamer_id); return esc(s.channel_name || r.streamer_name || r.streamer_id); } },
+    { h:"ลิงก์ช่อง", f:r => dashLink(dashStreamer(r.streamer_id).channel_url) },
+    { h:"ชื่อจริง-นามสกุล", f:r => dashRealName(dashStreamer(r.streamer_id), r.project) },
+    { h:"สถานะสัญญา", f:r => { const st = RES_STATE[up(r.status)] || DASH_STATE_EXTRA[up(r.status)] || { pill:"flat", label:r.status || "—" };
+        return `<span class="pill ${st.pill}">${esc(st.label)}</span>`; } },
+    { h:"วันเริ่มสัญญา", cls:"mono", f:r => esc(fmtDMY(r.contract_start) || "—") },
+    { h:"วันหมดสัญญา",  cls:"mono", f:r => esc(fmtDMY(r.contract_end) || "—") },
+  ], slice, (DB.sheet.tracker || []).length ? "ยังไม่มีสัญญาในกลุ่มนี้" : "ยังไม่มีข้อมูล — กด “ดึงข้อมูลจากชีต”");
+  $("dbInfo").textContent = `หน้า ${dashPage}/${pages} · ทั้งหมด ${rows.length} สัญญา`;
+  $("dbPrev").disabled = dashPage <= 1;
+  $("dbNext").disabled = dashPage >= pages;
+  $("dbPager").style.display = rows.length > DASH_PER_PAGE ? "flex" : "none";
+}
+$("dbTabs").addEventListener("click", e => {
+  const b = e.target.closest("[data-dbtab]"); if (!b) return;
+  dashTab = b.dataset.dbtab; dashPage = 1; renderDash();
+});
+$("dbPrev").addEventListener("click", () => { dashPage--; renderDash(); });
+$("dbNext").addEventListener("click", () => { dashPage++; renderDash(); });
+
 function render(){
   const today = refDate();
   const tracker = DB.sheet.tracker;
   const allRows = tracker.concat(DB.pending);   // ตรวจซ้ำโดยนับแถวที่ยังรอส่งด้วย
+  renderDash();
 
   /* ---- streamers ---- */
   const ts = $("tStreamers");
