@@ -435,6 +435,7 @@
       <button id="pullBtn" type="button" title="โหลดข้อมูลล่าสุดจาก Google Sheet — กดเมื่ออยากเห็นผลใหม่ทันที">ดึงข้อมูลจากชีต</button>
       <button id="themeBtn" type="button" title="สลับระหว่างหน้าจอสีมืดและสีสว่าง">สลับโหมด</button>
       <span id="userChip" class="hint" style="display:none"></span>
+      <button id="apiPwBtn" type="button" style="display:none" title="เปลี่ยนรหัสผ่านของบัญชีนี้">เปลี่ยนรหัสผ่าน</button>
       <button id="apiLogoutBtn" type="button" style="display:none" title="ออกจากระบบและล้างข้อมูลที่แคชไว้ในเครื่องนี้">ออกจากระบบ</button>
     </div>
   </header>
@@ -3057,7 +3058,48 @@ function renderApiUser(){
   const u = (apiSession() || {}).user;
   const on = API_MODE && !!u;
   chip.style.display = on ? "" : "none"; out.style.display = on ? "" : "none";
+  // เปลี่ยนรหัสผ่านได้เฉพาะผู้ดูแลเป็นรายคน — บัญชีผู้เยี่ยมชมใช้รหัสร่วมกัน ให้ผู้ดูแลระบบเป็นคนเปลี่ยนที่ Supabase
+  const pw = document.getElementById("apiPwBtn"); if (pw) pw.style.display = on && u.role === "admin" ? "" : "none";
   if (on) chip.textContent = `${u.name || u.email || "ผู้ใช้"} · ${u.role === "admin" ? "ผู้ดูแล" : "ผู้เยี่ยมชม"}`;
+}
+
+/** เปลี่ยนรหัสผ่านของบัญชีที่ล็อกอินอยู่ (Supabase Auth: PUT /auth/v1/user ด้วย token ของตัวเอง) — ไม่ต้องใช้อีเมลยืนยัน */
+const PW_MIN = 10;
+function pwMessage(status, j){
+  const code = String((j && (j.error_code || j.code || j.msg || j.message)) || "");
+  if (/same_password|different from the old/i.test(code)) return "รหัสผ่านใหม่ต้องไม่เหมือนรหัสเดิม";
+  if (/weak_password|too short|at least/i.test(code)) return `รหัสผ่านสั้นหรือคาดเดาง่ายเกินไป (ใช้อย่างน้อย ${PW_MIN} ตัว ผสมตัวอักษรและตัวเลข)`;
+  if (status === 401 || status === 403) return "หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่แล้วลองอีกครั้ง";
+  if (status === 429) return "ลองบ่อยเกินไป รอสักครู่แล้วลองใหม่";
+  return "เปลี่ยนรหัสผ่านไม่สำเร็จ";
+}
+async function supabaseUpdatePassword(token, password){
+  let res;
+  try {
+    res = await fetch(`${CDM_CFG.supabaseUrl}/auth/v1/user`, {
+      method: "PUT", headers: { "Content-Type": "application/json", apikey: CDM_CFG.supabaseAnonKey, Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ password }),
+    });
+  } catch (e) { throw new Error("เชื่อมต่อระบบเข้าสู่ระบบไม่ได้ (ตรวจอินเทอร์เน็ต)"); }
+  let j = null; try { j = await res.json(); } catch (e) { /* ไม่ใช่ JSON */ }
+  if (!res.ok) throw new Error(pwMessage(res.status, j));
+}
+async function changePassword(problem){
+  const ok = await ask({
+    title: "เปลี่ยนรหัสผ่าน", yes: "เปลี่ยนรหัสผ่าน", no: "ยกเลิก",
+    html: (problem ? `<div class="note" style="margin:0 0 10px">${esc(problem)}</div>` : "") +
+      `<div class="f"><label>รหัสผ่านใหม่</label><input id="pw1" type="password" autocomplete="new-password"></div>
+       <div class="f" style="margin-top:8px"><label>พิมพ์รหัสผ่านใหม่ซ้ำอีกครั้ง</label><input id="pw2" type="password" autocomplete="new-password"></div>
+       <div class="hint" style="margin-top:8px">อย่างน้อย ${PW_MIN} ตัวอักษร · เปลี่ยนแล้วใช้รหัสใหม่ตอนเข้าสู่ระบบครั้งถัดไป</div>`,
+  });
+  if (!ok) return;
+  const a = $("pw1").value, b = $("pw2").value;      // ช่องยังอยู่ใน DOM หลังกล่องปิด
+  if (a.length < PW_MIN) return changePassword(`รหัสผ่านต้องยาวอย่างน้อย ${PW_MIN} ตัวอักษร`);
+  if (a !== b) return changePassword("รหัสผ่านทั้งสองช่องไม่ตรงกัน");
+  try {
+    await supabaseUpdatePassword(await getApiToken(), a);
+    toast("เปลี่ยนรหัสผ่านแล้ว — ครั้งหน้าเข้าสู่ระบบด้วยรหัสใหม่", "ok", 6000);
+  } catch (e) { return changePassword(e.message); }
 }
 /** แถวสตรีมเมอร์ในหน้าจอเห็นเลขบัตรแบบปิดบัง — ผู้ดูแลกดปุ่มนี้เพื่อขอเลขเต็มมาแก้ (ระบบบันทึกว่าใครเปิดดู) */
 function setupNidReveal(id){
@@ -3123,6 +3165,7 @@ if (API_MODE) {
   }).observe(document.body, { childList: true, subtree: true, characterData: true });
   renderApiUser();
   document.getElementById("apiLogoutBtn").addEventListener("click", () => { apiSignOut(); location.reload(); });
+  document.getElementById("apiPwBtn").addEventListener("click", () => changePassword());
   // มี session ค้างอยู่ -> ยืนยันกับเซิร์ฟเวอร์ว่ายังใช้ได้และอัปเดตชื่อ/บทบาทล่าสุด (ถ้าใช้ไม่ได้ ระบบจะพากลับหน้าล็อกอินเอง)
   if (apiSession()) {
     apiFetch("GET", "/me").then(r => { const s = apiSession(); if (s) { s.user = r.user; setApiSession(s); } applyRoleUI(); renderApiUser(); }).catch(() => {});
