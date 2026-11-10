@@ -1266,6 +1266,12 @@ async function tryUnlock(id, pw){
 /* ══════════ helpers ══════════ */
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+/* ลิงก์ที่มาจากข้อมูล (URL ไฟล์สัญญา ฯลฯ): esc() กันหลุดออกจากเครื่องหมายคำพูด แต่ไม่กันสกีม javascript: — จึงเปิดเป็นลิงก์เฉพาะ http(s)
+   (เบราว์เซอร์ตัดช่องว่าง/ขึ้นบรรทัดใหม่ในชื่อสกีมก่อนตีความ จึงตัดอักขระพวกนี้ออกก่อนตรวจด้วย) อย่างอื่นแสดงเป็นข้อความ กดไม่ได้ */
+const isHttpUrl = u => /^https?:\/\//i.test(String(u ?? "").replace(/[\u0000-\u0020\u00a0\u1680\u2000-\u200b\u2028\u2029\u202f\u205f\u3000\ufeff]/g, ""));
+const fileLink = (u, label) => isHttpUrl(u)
+  ? `<a href="${esc(String(u).trim())}" target="_blank" rel="noopener noreferrer">${esc(label)} ↗</a>`
+  : `<span class="hint" title="ลิงก์นี้ไม่ใช่ http(s) จึงไม่เปิดให้กด: ${esc(u)}">${esc(label)} (ลิงก์ไม่ถูกต้อง)</span>`;
 const blank = v => v === undefined || v === null || String(v).trim() === "";
 const up = v => String(v ?? "").trim().toUpperCase();
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -3755,7 +3761,7 @@ const LIST_COLS = [
   { h:"", cls:"wrap-cell", f:r=>{
       const files = [[r.draft_file_url_contract_nda,"สัญญา"],[r.draft_file_url_mou,"MOU"],[r.signed_file_url,"ฉบับเซ็น"]]
         .filter(([u])=>!blank(u))
-        .map(([u,l])=>`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join(" · ");
+        .map(([u,l])=>fileLink(u,l)).join(" · ");
       const inSheet = !!DB.sheet.tracker.find(x=>String(x.contract_id)===String(r.contract_id));
       const btns = inSheet && cfgReady() && !isViewer()
         ? `<button class="sm" data-editrow="${esc(r.contract_id)}" type="button">แก้</button>
@@ -3928,7 +3934,7 @@ function renderResults(){
       <div class="when">${esc((r.generated_at || r.updated_at || "").slice(0,16))}</div>
       ${blank(r.error_message) ? "" : `${errorHtml(r.error_message)}`}
       ${files.length || canEdit ? `<div class="files">${files.map(([u,l]) =>
-        `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join("")}${
+        fileLink(u,l)).join("")}${
         canEdit ? `<button class="sm" data-editrow="${esc(r.contract_id)}" type="button">แก้ข้อมูล</button>
                       <button class="sm" data-regen="${esc(r.contract_id)}" type="button">สร้างใหม่</button>
                       <button class="sm danger" data-delrow="${esc(r.contract_id)}" type="button">ลบ</button>` : ""
@@ -4022,7 +4028,7 @@ function renderArchive(){
       { h:"ไฟล์", cls:"wrap-cell", f:r=>{
           const files = [[r.draft_file_url_contract_nda,"สัญญา"],[r.draft_file_url_mou,"MOU"],[r.signed_file_url,"ฉบับเซ็น"]]
             .filter(([u]) => !blank(u));
-          return files.length ? files.map(([u,l]) => `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(l)} ↗</a>`).join(" · ") : "—";
+          return files.length ? files.map(([u,l]) => fileLink(u,l)).join(" · ") : "—";
         } },
     ], g.list, "");
     rowsOpenEdit(table, g.list, r => r.contract_id);
@@ -4209,7 +4215,7 @@ function dashLink(url){
   const u = String(url || "").trim();
   if (!u) return '<span class="hint">—</span>';
   const shown = esc(u.replace(/^https?:\/\/(www\.)?/i, "").replace(/\/$/, ""));
-  return /^https?:\/\//i.test(u)
+  return isHttpUrl(u)
     ? `<a class="dbLink" href="${esc(u)}" target="_blank" rel="noopener noreferrer" title="${esc(u)}">${shown} ↗</a>`
     : `<span class="dbLink" title="${esc(u)}">${shown}</span>`;      // ไม่ใช่ลิงก์ที่เปิดได้ (เช่นพิมพ์แค่ชื่อ) แสดงเป็นข้อความเฉย ๆ
 }
@@ -4373,10 +4379,10 @@ function render(){
         : x.d<=7 ? '<span class="pill action">⚠ เตือน 7 วัน</span>'
         : x.d<=14 ? '<span class="pill action">⚠ เตือน 14 วัน</span>' : '<span class="pill action">⚠ เตือน 30 วัน</span>' },
     { h:"ต่อกี่เดือน", f:x=>`<input type="number" min="1" max="36" style="width:60px" data-renewmonths="${esc(x.r.contract_id)}"
-        value="${renewSel[x.r.contract_id]?.months ?? monthsOf(x.r.contract_start, x.r.contract_end)}" ${renewSel[x.r.contract_id]?"":"disabled"}>` },
+        value="${esc(renewSel[x.r.contract_id]?.months ?? monthsOf(x.r.contract_start, x.r.contract_end))}" ${renewSel[x.r.contract_id]?"":"disabled"}>` },
     // วันที่ทำสัญญาฉบับใหม่ — ตั้งต้นเป็นวันนี้ แต่แก้ได้ เผื่อทำสัญญาจริงคนละวันกับวันที่กดในคอนโซล
     { h:"วันที่ทำสัญญาใหม่", f:x=>`<input type="date" style="width:135px" data-renewdate="${esc(x.r.contract_id)}"
-        value="${renewSel[x.r.contract_id]?.contractDate ?? todayISO()}" ${renewSel[x.r.contract_id]?"":"disabled"}>` },
+        value="${esc(renewSel[x.r.contract_id]?.contractDate ?? todayISO())}" ${renewSel[x.r.contract_id]?"":"disabled"}>` },
   ], expiring, "ไม่มีสัญญาใกล้หมดอายุใน 30 วัน");
   $("tExpiry").querySelectorAll("[data-editexp]").forEach(b =>
     b.addEventListener("click", () => openEdit(b.dataset.editexp)));
