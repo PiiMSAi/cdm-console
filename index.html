@@ -3,6 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- CSP: สคริปต์ในหน้านี้อนุญาตด้วย hash ของเนื้อหา ถ้าแก้อะไรในบล็อก script (รวมบรรทัด CDM_CONFIG) ต้องรัน node tools/csp.cjs ก่อน commit ทุกครั้ง ไม่งั้นเบราว์เซอร์จะไม่รันสคริปต์และหน้าจะว่างเปล่า (ตรวจได้ด้วย node tools/csp.cjs แล้วตามด้วยตัวเลือก check) -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-XjANddVpd9hj4ODpEGhC/z/J13IC5d6LF4Xq7P3CSZA=' 'sha256-FCnrmZLDemTnKcN1+0Tu3QY6UDDbmxjSA57tX4cANwo='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://cdm-contract-system-production.up.railway.app https://paocpduerqmvnkzlqvrr.supabase.co https://cdm-console-proxy.patsuang-cdm.workers.dev; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>CDM Contract Console</title>
 <meta name="theme-color" content="#070b09">
 <link rel="preconnect" href="https://fonts.googleapis.com">
