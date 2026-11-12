@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <!-- CSP: สคริปต์ในหน้านี้อนุญาตด้วย hash ของเนื้อหา ถ้าแก้อะไรในบล็อก script (รวมบรรทัด CDM_CONFIG) ต้องรัน node tools/csp.cjs ก่อน commit ทุกครั้ง ไม่งั้นเบราว์เซอร์จะไม่รันสคริปต์และหน้าจะว่างเปล่า (ตรวจได้ด้วย node tools/csp.cjs แล้วตามด้วยตัวเลือก check) -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-XjANddVpd9hj4ODpEGhC/z/J13IC5d6LF4Xq7P3CSZA=' 'sha256-FCnrmZLDemTnKcN1+0Tu3QY6UDDbmxjSA57tX4cANwo='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://cdm-contract-system-production.up.railway.app https://paocpduerqmvnkzlqvrr.supabase.co https://cdm-console-proxy.patsuang-cdm.workers.dev; base-uri 'none'; form-action 'none'; object-src 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-XjANddVpd9hj4ODpEGhC/z/J13IC5d6LF4Xq7P3CSZA=' 'sha256-EylUTESjV9vF0tgJ7qPGjWGCYbIhg5MQHcA+d4MwFHc='; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src https://cdm-contract-system-production.up.railway.app https://paocpduerqmvnkzlqvrr.supabase.co https://cdm-console-proxy.patsuang-cdm.workers.dev; base-uri 'none'; form-action 'none'; object-src 'none'">
 <title>CDM Contract Console</title>
 <meta name="theme-color" content="#070b09">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -1282,6 +1282,9 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SAMPLE_RE = /^\(.*\)$/;
 const MONTHS = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const slug = s => String(s||"").replace(/[^A-Za-z0-9]/g,"").toUpperCase();
+/* ชุดเอกสาร Revo (ลงท้าย _REVO) แยกรอบของตัวเอง ไม่ปนกับสัญญาธรรมดาของโครงการเดียวกัน:
+   BATCH-CABALPH-REVO-202610 แทน BATCH-CABALPH-202610 — ต้องลงท้ายด้วย yyyymm เสมอ (ระบบหาเดือนของโฟลเดอร์จากเลขท้าย) */
+const batchTag = bundle => /_REVO(?=\+|$)/i.test(String(bundle||"")) ? "-REVO" : "";
 const todayISO = () => new Date().toISOString().slice(0,10);
 const refDate = () => new Date(($("refDate").value || todayISO()) + "T00:00:00");
 const daysBetween = (a,b) => Math.round((a-b)/86400000);
@@ -1960,8 +1963,8 @@ let selected = {};
 let renewSel = {};
 ["b_project","b_cdate","b_start","b_end","b_currency","b_bundle"]
   .forEach(id => $(id).addEventListener("input", () => { updateBatchId(); renderPicker(); renderBatchPreflight(); }));
-$("b_project").addEventListener("change", () => { fillBundles(); syncGameField(); renderPicker(); renderBatchPreflight(); });
-$("b_bundle").addEventListener("change", () => { syncGameField(); renderPicker(); renderBatchPreflight(); });
+$("b_project").addEventListener("change", () => { fillBundles(); updateBatchId(); syncGameField(); renderPicker(); renderBatchPreflight(); });
+$("b_bundle").addEventListener("change", () => { updateBatchId(); syncGameField(); renderPicker(); renderBatchPreflight(); });
 $("b_game").addEventListener("change", renderBatchPreflight);
 
 /* ประโยคค่าตอบแทนที่จะลงในสัญญา — ต้องประกอบแบบเดียวกับ compensationText() ใน WF-01
@@ -2059,7 +2062,7 @@ function renderTplInfo(){
 
 function batchId(){
   const p = slug($("b_project").value), d = $("b_start").value || $("b_cdate").value;
-  return (p && d) ? `BATCH-${p}-${d.slice(0,7).replace("-","")}` : "";
+  return (p && d) ? `BATCH-${p}${batchTag($("b_bundle").value)}-${d.slice(0,7).replace("-","")}` : "";
 }
 function updateBatchId(){
   $("b_id").textContent = batchId() || "—";
@@ -2334,7 +2337,7 @@ function buildRenewalRow(oldRow, months, contractDate){
   const cdate = DATE_RE.test(contractDate || "") ? contractDate : now;
   const o = {}; TRACKER_COLS.forEach(k => o[k] = "");
   Object.assign(o, {
-    contract_id: cid, batch_id: `BATCH-${slug(oldRow.project)}-${ym}`,
+    contract_id: cid, batch_id: `BATCH-${slug(oldRow.project)}${batchTag(oldRow.contract_type_bundle)}-${ym}`,
     streamer_id: oldRow.streamer_id, streamer_name: oldRow.streamer_name,
     project: oldRow.project, game_name: oldRow.game_name,
     contract_type_bundle: oldRow.contract_type_bundle, template_version: "v1",
